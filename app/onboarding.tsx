@@ -17,6 +17,7 @@ import {
   Keyboard,
 } from 'react-native';
 import { WebView } from 'react-native-webview';
+import LottieView from 'lottie-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { useAuth } from '../contexts/AuthContext';
@@ -1459,54 +1460,27 @@ export default function OnboardingScreen() {
           </View>
 
           {(step === 'language' || step === 'modeSelection') ? (
-            // Unified Selection Screen - Same Avatar, Different Content
-            <View style={styles.selectionContainer}>
-              {/* Spline Avatar - SHARED between both pages */}
-              <View style={styles.splineAvatarContainer}>
-                {/* Speech Bubble - Dynamic Content */}
-                <View style={styles.speechBubbleTop}>
-                  <Text style={styles.speechBubbleText} numberOfLines={4}>
-                    {step === 'language' 
-                      ? `Hi ${userName}, I'm Genybot, your AI tutor. What language do you prefer me to talk? 🤖`
-                      : (selectedLanguage === 'Bahasa Melayu'
-                        ? `${userName}, bagaimana anda ingin melengkapkan orientasi anda?`
-                        : `${userName}, how would you like to complete your orientation?`)}
-                  </Text>
-                  <View style={styles.speechBubbleTail} />
-                </View>
-                
-                <WebView
-                  source={{
-                    html: `
-                      <!DOCTYPE html>
-                      <html>
-                      <head>
-                        <meta charset="utf-8">
-                        <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-                        <style>
-                          * { margin: 0; padding: 0; box-sizing: border-box; }
-                          html, body { width: 100%; height: 100%; background: transparent; overflow: hidden; }
-                          spline-viewer { width: 100%; height: 100%; background: transparent; display: block; }
-                        </style>
-                      </head>
-                      <body>
-                        <script type="module" src="https://unpkg.com/@splinetool/viewer@1.10.57/build/spline-viewer.js"></script>
-                        <spline-viewer url="https://prod.spline.design/0DRfJFSAhCeNIQT3/scene.splinecode"></spline-viewer>
-                      </body>
-                      </html>
-                    `
-                  }}
-                  style={styles.splineViewer}
-                  javaScriptEnabled={true}
-                  domStorageEnabled={true}
-                  startInLoadingState={false}
-                  scalesPageToFit={false}
-                  backgroundColor="transparent"
-                  allowsInlineMediaPlayback={true}
-                  mediaPlaybackRequiresUserAction={false}
-                  mixedContentMode="compatibility"
-                  renderToHardwareTextureAndroid={true}
-                  androidHardwareAccelerationDisabled={false}
+            // Unified Selection Screen - White Background with Vibrant Colors
+            <View style={styles.selectionContainerWhite}>
+              {/* Speech Bubble - Centered between header and animation */}
+              <View style={styles.speechBubbleCentered}>
+                <Text style={styles.speechBubbleTextVibrant} numberOfLines={4}>
+                  {step === 'language' 
+                    ? `Hi ${userName}, I'm Genybot, your AI tutor. What language do you prefer me to talk? 🤖`
+                    : (selectedLanguage === 'Bahasa Melayu'
+                      ? `${userName}, bagaimana anda ingin melengkapkan orientasi anda?`
+                      : `${userName}, how would you like to complete your orientation?`)}
+                </Text>
+                <View style={styles.speechBubbleTailVibrant} />
+              </View>
+
+              {/* Lottie Animation */}
+              <View style={styles.lottieContainer}>
+                <LottieView
+                  source={require('../assets/images/animation (2).json')}
+                  style={styles.lottieViewer}
+                  autoPlay
+                  loop
                 />
               </View>
 
@@ -1514,22 +1488,22 @@ export default function OnboardingScreen() {
               {step === 'language' ? (
                 // Language Selection Content
                 <>
-                  <View style={styles.welcomeTextContainer}>
-                    <Text style={styles.selectionTitle}>Please select a language</Text>
-                    <Text style={styles.selectionSubtitle}>
+                  <View style={styles.welcomeTextContainerWhite}>
+                    <Text style={styles.selectionTitleVibrant}>Please select a language</Text>
+                    <Text style={styles.selectionSubtitleVibrant}>
                       Choose your preferred language for onboarding
                     </Text>
                   </View>
 
-                  <View style={styles.languageButtons}>
+                  <View style={styles.languageButtonsVibrant}>
                     {['English', 'Bahasa Melayu'].map((lang) => (
                       <TouchableOpacity 
                         key={lang}
-                        style={styles.languageButton}
+                        style={styles.languageButtonVibrant}
                         onPress={() => handleLanguageSelection(lang)}
                         activeOpacity={0.8}
                       >
-                        <Text style={styles.languageButtonText}>
+                        <Text style={styles.languageButtonTextVibrant}>
                           {lang === 'English' ? '🇬🇧' : '🇲🇾'} {lang}
                         </Text>
                       </TouchableOpacity>
@@ -1539,36 +1513,36 @@ export default function OnboardingScreen() {
               ) : (
                 // Mode Selection Content
                 <>
-                  <View style={styles.welcomeTextContainer}>
-                    <Text style={styles.selectionTitle}>
+                  <View style={styles.welcomeTextContainerWhite}>
+                    <Text style={styles.selectionTitleVibrant}>
                       {selectedLanguage === 'Bahasa Melayu' 
                         ? 'Selamat datang ke Genius!' 
                         : 'Welcome to Genius!'}
                     </Text>
-                    <Text style={styles.selectionSubtitle}>
+                    <Text style={styles.selectionSubtitleVibrant}>
                       {selectedLanguage === 'Bahasa Melayu'
                         ? 'Bagaimana anda ingin melengkapkan profil anda?'
                         : 'How would you like to complete your profile?'}
                     </Text>
                   </View>
 
-                  <View style={styles.modeButtons}>
+                  <View style={styles.modeButtonsVibrant}>
                     <TouchableOpacity 
-                      style={styles.modeButton}
+                      style={styles.modeButtonVibrant}
                       onPress={() => handleModeSelection('chat')}
                       activeOpacity={0.8}
                     >
                       <MessageCircle size={32} color="#FFFFFF" strokeWidth={2} />
-                      <Text style={styles.modeButtonTitle}>Chat</Text>
+                      <Text style={styles.modeButtonTitleVibrant}>Chat</Text>
                     </TouchableOpacity>
 
                     <TouchableOpacity 
-                      style={styles.modeButton}
+                      style={styles.modeButtonVibrant}
                       onPress={() => handleModeSelection('voice')}
                       activeOpacity={0.8}
                     >
                       <Mic size={32} color="#FFFFFF" strokeWidth={2} />
-                      <Text style={styles.modeButtonTitle}>Voice</Text>
+                      <Text style={styles.modeButtonTitleVibrant}>Voice</Text>
                     </TouchableOpacity>
                   </View>
                 </>
@@ -1611,82 +1585,13 @@ export default function OnboardingScreen() {
                 }
               ]}
             >
-              {/* Spline Avatar */}
+              {/* Lottie Avatar */}
               <View style={styles.voiceAvatarSection}>
-                <WebView
-                  source={{
-                    html: `
-                      <!DOCTYPE html>
-                      <html>
-                      <head>
-                        <meta charset="utf-8">
-                        <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-                        <style>
-                          * { margin: 0; padding: 0; box-sizing: border-box; }
-                          html, body { width: 100%; height: 100%; background: transparent; overflow: hidden; }
-                          spline-viewer { width: 100%; height: 100%; background: transparent; display: block; }
-                          
-                          /* Hide Spline watermark */
-                          #logo, .logo, [class*="logo"], [id*="logo"],
-                          a[href*="spline"], a[target="_blank"],
-                          div[style*="position: absolute"][style*="bottom"],
-                          div[style*="position: fixed"][style*="bottom"] {
-                            display: none !important;
-                            opacity: 0 !important;
-                            visibility: hidden !important;
-                            pointer-events: none !important;
-                          }
-                        </style>
-                      </head>
-                      <body>
-                        <script type="module" src="https://unpkg.com/@splinetool/viewer@1.10.57/build/spline-viewer.js"></script>
-                        <spline-viewer url="https://prod.spline.design/0DRfJFSAhCeNIQT3/scene.splinecode"></spline-viewer>
-                        
-                        <script>
-                          // Remove watermark after load
-                          window.addEventListener('load', function() {
-                            setTimeout(function() {
-                              const viewer = document.querySelector('spline-viewer');
-                              if (viewer && viewer.shadowRoot) {
-                                const style = document.createElement('style');
-                                style.textContent = \`
-                                  #logo, .logo, [class*="logo"], [id*="logo"],
-                                  a, a[href*="spline"],
-                                  div[style*="position: absolute"][style*="bottom"],
-                                  div[style*="position: fixed"][style*="bottom"] {
-                                    display: none !important;
-                                    opacity: 0 !important;
-                                    visibility: hidden !important;
-                                  }
-                                \`;
-                                try {
-                                  viewer.shadowRoot.appendChild(style);
-                                } catch(e) {
-                                  console.log('Could not hide watermark:', e);
-                                }
-                              }
-                            }, 500);
-                          });
-                        </script>
-                      </body>
-                      </html>
-                    `
-                  }}
-                  style={styles.voiceSplineViewer}
-                  androidLayerType="hardware"
-                  cacheEnabled={true}
-                  cacheMode="LOAD_CACHE_ELSE_NETWORK"
-                  onMemoryWarning={() => console.log('Spline WebView memory warning')}
-                  javaScriptEnabled={true}
-                  domStorageEnabled={true}
-                  startInLoadingState={false}
-                  scalesPageToFit={false}
-                  backgroundColor="transparent"
-                  allowsInlineMediaPlayback={true}
-                  mediaPlaybackRequiresUserAction={false}
-                  mixedContentMode="compatibility"
-                  renderToHardwareTextureAndroid={true}
-                  androidHardwareAccelerationDisabled={false}
+                <LottieView
+                  source={require('../assets/images/animation (2).json')}
+                  style={styles.voiceLottieViewer}
+                  autoPlay
+                  loop
                 />
               </View>
 
@@ -2428,6 +2333,19 @@ const styles = StyleSheet.create({
     paddingHorizontal: 32,
     paddingBottom: 60,
   },
+  // White Background Selection Container
+  selectionContainerWhite: {
+    flex: 1,
+    justifyContent: 'flex-start',
+    alignItems: 'center',
+    paddingHorizontal: 24,
+    paddingTop: 20,
+    paddingBottom: 40,
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 30,
+    borderTopRightRadius: 30,
+    marginTop: 10,
+  },
   selectionAvatar: {
     marginBottom: 32,
     alignItems: 'center',
@@ -2445,6 +2363,121 @@ const styles = StyleSheet.create({
     width: 280,
     height: 260,
     backgroundColor: 'transparent',
+  },
+  lottieViewer: {
+    width: 280,
+    height: 260,
+  },
+  lottieContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 20,
+  },
+  // Centered Speech Bubble for White Background
+  speechBubbleCentered: {
+    backgroundColor: '#7C3AED',
+    borderRadius: 20,
+    padding: 16,
+    marginBottom: 16,
+    marginTop: 10,
+    shadowColor: '#7C3AED',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 12,
+    elevation: 8,
+    width: '100%',
+    maxWidth: 320,
+  },
+  speechBubbleTextVibrant: {
+    fontSize: 14,
+    fontFamily: 'Inter-SemiBold',
+    fontWeight: '600',
+    color: '#FFFFFF',
+    textAlign: 'center',
+    lineHeight: 20,
+  },
+  speechBubbleTailVibrant: {
+    position: 'absolute',
+    bottom: -10,
+    left: '50%',
+    marginLeft: -10,
+    width: 0,
+    height: 0,
+    borderLeftWidth: 10,
+    borderRightWidth: 10,
+    borderTopWidth: 10,
+    borderLeftColor: 'transparent',
+    borderRightColor: 'transparent',
+    borderTopColor: '#7C3AED',
+  },
+  // Vibrant Styles for White Background
+  welcomeTextContainerWhite: {
+    marginBottom: 24,
+    alignItems: 'center',
+  },
+  selectionTitleVibrant: {
+    fontSize: 24,
+    fontFamily: 'Inter-Bold',
+    fontWeight: '800',
+    color: '#1F2937',
+    textAlign: 'center',
+    marginBottom: 8,
+    letterSpacing: -0.5,
+  },
+  selectionSubtitleVibrant: {
+    fontSize: 15,
+    fontFamily: 'Inter-Regular',
+    color: '#6B7280',
+    textAlign: 'center',
+    lineHeight: 22,
+  },
+  languageButtonsVibrant: {
+    width: '100%',
+    gap: 12,
+  },
+  languageButtonVibrant: {
+    backgroundColor: '#7C3AED',
+    borderRadius: 16,
+    paddingVertical: 18,
+    paddingHorizontal: 24,
+    alignItems: 'center',
+    shadowColor: '#7C3AED',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 12,
+    elevation: 6,
+  },
+  languageButtonTextVibrant: {
+    fontSize: 18,
+    fontFamily: 'Inter-Bold',
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
+  modeButtonsVibrant: {
+    flexDirection: 'row',
+    gap: 16,
+    width: '100%',
+  },
+  modeButtonVibrant: {
+    flex: 1,
+    backgroundColor: '#7C3AED',
+    borderRadius: 16,
+    paddingVertical: 24,
+    paddingHorizontal: 16,
+    alignItems: 'center',
+    shadowColor: '#7C3AED',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 12,
+    elevation: 6,
+    justifyContent: 'center',
+    gap: 12,
+  },
+  modeButtonTitleVibrant: {
+    fontSize: 17,
+    fontFamily: 'Inter-Bold',
+    fontWeight: '700',
+    color: '#FFFFFF',
   },
   speechBubbleTop: {
     position: 'absolute',
@@ -2696,6 +2729,10 @@ const styles = StyleSheet.create({
     width: 260,
     height: 220,
     backgroundColor: 'transparent',
+  },
+  voiceLottieViewer: {
+    width: 260,
+    height: 220,
   },
   questionContainer: {
     paddingHorizontal: 32,
