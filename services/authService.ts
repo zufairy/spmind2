@@ -150,40 +150,59 @@ class AuthService {
             profileData.birth_date = credentials.birth_date;
           }
 
-          const { data: insertedProfile, error: profileError } = await supabase
+          console.log('📝 AuthService: Creating user profile with data:', { 
+            id: profileData.id, 
+            email: profileData.email, 
+            username: profileData.username,
+            full_name: profileData.full_name 
+          });
+          
+          // Add timeout to database insert
+          const insertPromise = supabase
             .from('users')
             .insert([profileData])
             .select()
             .single();
+          
+          const timeoutPromise = new Promise((_, reject) => 
+            setTimeout(() => reject(new Error('Database insert timeout')), 15000)
+          );
+          
+          const { data: insertedProfile, error: profileError } = await Promise.race([
+            insertPromise,
+            timeoutPromise
+          ]) as any;
 
           if (profileError) {
-            console.error('Profile creation error:', profileError);
-            console.error('Profile error details:', JSON.stringify(profileError, null, 2));
+            console.error('❌ AuthService: Profile creation error:', profileError);
+            console.error('❌ AuthService: Profile error details:', JSON.stringify(profileError, null, 2));
             
             // Check if it's a duplicate username/email error
-            const errorMessage = profileError.message || '';
-            if (errorMessage.includes('users_username_key')) {
-              // Delete the auth user since profile creation failed
-              await supabase.auth.admin.deleteUser(authData.user.id).catch(() => {});
+            const errorMessage = profileError.message?.toLowerCase() || '';
+            const errorCode = profileError.code || '';
+            
+            if (errorMessage.includes('username') && (errorMessage.includes('duplicate') || errorMessage.includes('unique') || errorCode.includes('23505'))) {
+              // Username already exists - can't delete auth user without admin key, but that's okay
+              console.warn('⚠️ AuthService: Username already exists, auth user created but profile failed');
               return { 
                 user: null, 
-                error: { message: 'Username already exists' } as AuthError,
+                error: { message: 'Username already exists. Please choose a different username.' } as AuthError,
                 needsEmailConfirmation: false
               };
-            } else if (errorMessage.includes('users_email_key')) {
-              // Delete the auth user since profile creation failed
-              await supabase.auth.admin.deleteUser(authData.user.id).catch(() => {});
+            } else if (errorMessage.includes('email') && (errorMessage.includes('duplicate') || errorMessage.includes('unique') || errorCode.includes('23505'))) {
+              // Email already exists
+              console.warn('⚠️ AuthService: Email already exists, auth user created but profile failed');
               return { 
                 user: null, 
-                error: { message: 'Email already exists' } as AuthError,
+                error: { message: 'Email already exists. Please use a different email or sign in.' } as AuthError,
                 needsEmailConfirmation: false
               };
-            } else if (errorMessage.includes('duplicate') || errorMessage.includes('unique')) {
-              // Generic duplicate error
-              await supabase.auth.admin.deleteUser(authData.user.id).catch(() => {});
+            } else if (errorMessage.includes('policy') || errorMessage.includes('row level security') || errorMessage.includes('rls')) {
+              // RLS policy error
+              console.error('❌ AuthService: RLS policy error - user may not have permission to insert');
               return { 
                 user: null, 
-                error: { message: profileError.message } as AuthError,
+                error: { message: 'Registration failed due to security policy. Please contact support.' } as AuthError,
                 needsEmailConfirmation: false
               };
             }
@@ -191,32 +210,55 @@ class AuthService {
             // For other errors, return the error message
             return { 
               user: null, 
-              error: { message: profileError.message || 'Profile creation failed' } as AuthError,
+              error: { message: profileError.message || 'Profile creation failed. Please try again.' } as AuthError,
               needsEmailConfirmation: false
             };
           }
 
+          console.log('✅ AuthService: User profile created successfully:', insertedProfile.id);
+          
+          // Set the current user
           this.currentUser = insertedProfile;
-          return { user: insertedProfile, error: null, needsEmailConfirmation: true };
+          
+          // Try to get the session to ensure auth state is properly set
+          try {
+            const { data: sessionData } = await supabase.auth.getSession();
+            if (sessionData?.session) {
+              this.currentSession = sessionData.session;
+              console.log('✅ AuthService: Session retrieved after registration');
+            }
+          } catch (sessionError) {
+            console.warn('⚠️ AuthService: Could not retrieve session after registration:', sessionError);
+            // Continue anyway - session might be set automatically
+          }
+          
+          return { user: insertedProfile, error: null, needsEmailConfirmation: false };
         } catch (profileError: any) {
           console.error('Profile creation failed:', profileError);
           
           // Check if it's a duplicate error
-          const errorMessage = profileError.message || '';
-          if (errorMessage.includes('username') && (errorMessage.includes('duplicate') || errorMessage.includes('unique'))) {
-            // Delete the auth user since profile creation failed
-            await supabase.auth.admin.deleteUser(authData.user.id).catch(() => {});
+          const errorMessage = profileError.message?.toLowerCase() || '';
+          const errorCode = profileError.code || '';
+          
+          if (errorMessage.includes('username') && (errorMessage.includes('duplicate') || errorMessage.includes('unique') || errorCode.includes('23505'))) {
+            console.warn('⚠️ AuthService: Username already exists in catch block');
             return { 
               user: null, 
-              error: { message: 'Username already exists' } as AuthError,
+              error: { message: 'Username already exists. Please choose a different username.' } as AuthError,
               needsEmailConfirmation: false
             };
-          } else if (errorMessage.includes('email') && (errorMessage.includes('duplicate') || errorMessage.includes('unique'))) {
-            // Delete the auth user since profile creation failed
-            await supabase.auth.admin.deleteUser(authData.user.id).catch(() => {});
+          } else if (errorMessage.includes('email') && (errorMessage.includes('duplicate') || errorMessage.includes('unique') || errorCode.includes('23505'))) {
+            console.warn('⚠️ AuthService: Email already exists in catch block');
             return { 
               user: null, 
-              error: { message: 'Email already exists' } as AuthError,
+              error: { message: 'Email already exists. Please use a different email or sign in.' } as AuthError,
+              needsEmailConfirmation: false
+            };
+          } else if (errorMessage.includes('policy') || errorMessage.includes('row level security') || errorMessage.includes('rls')) {
+            console.error('❌ AuthService: RLS policy error in catch block');
+            return { 
+              user: null, 
+              error: { message: 'Registration failed due to security policy. Please contact support.' } as AuthError,
               needsEmailConfirmation: false
             };
           }
@@ -224,7 +266,7 @@ class AuthService {
           // For other errors, return the error
           return { 
             user: null, 
-            error: { message: profileError.message || 'Profile creation failed' } as AuthError,
+            error: { message: profileError.message || 'Profile creation failed. Please try again.' } as AuthError,
             needsEmailConfirmation: false
           };
         }

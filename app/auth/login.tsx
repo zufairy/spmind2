@@ -208,13 +208,22 @@ export default function LoginScreen() {
               style={[styles.googleButton, loading && styles.googleButtonDisabled]}
               onPress={handleGoogleLogin}
               disabled={loading}
+              activeOpacity={0.8}
             >
               {loading ? (
                 <LoadingSpinner size={20} color="#000" />
               ) : (
                 <>
                   <View style={styles.googleIconContainer}>
-                    <Text style={styles.googleIcon}>G</Text>
+                    <View style={styles.googleIconWrapper}>
+                      <View style={styles.googleIconCircle}>
+                        <View style={[styles.googleIconSegment, styles.googleIconBlue]} />
+                        <View style={[styles.googleIconSegment, styles.googleIconRed]} />
+                        <View style={[styles.googleIconSegment, styles.googleIconYellow]} />
+                        <View style={[styles.googleIconSegment, styles.googleIconGreen]} />
+                        <View style={styles.googleIconCenter} />
+                      </View>
+                    </View>
                   </View>
                   <Text style={styles.googleButtonText}>Continue with Google</Text>
                 </>
@@ -321,18 +330,18 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   forgotPasswordText: {
-    color: '#3B82F6',
+    color: '#FFFFFF',
     fontSize: 13,
     fontFamily: 'Inter-Medium',
   },
   loginButton: {
-    backgroundColor: '#FF6B35',
+    backgroundColor: '#FF6600',
     borderRadius: 12,
     height: 52,
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 16,
-    shadowColor: '#FF6B35',
+    shadowColor: '#FF6600',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.4,
     shadowRadius: 8,
@@ -370,41 +379,94 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: '#FFFFFF',
-    borderRadius: 12,
+    borderRadius: 8,
     height: 52,
     marginBottom: 20,
-    gap: 10,
+    gap: 12,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.15)',
+    borderColor: 'rgba(218, 220, 224, 0.3)',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
     shadowRadius: 8,
-    elevation: 6,
+    elevation: 4,
   },
   googleButtonDisabled: {
     opacity: 0.7,
   },
   googleIconContainer: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: '#4285F4',
+    width: 20,
+    height: 20,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 8,
   },
-  googleIcon: {
-    fontSize: 20,
-    fontFamily: 'SpaceGrotesk-Bold',
-    fontWeight: '700',
-    color: '#FFFFFF',
+  googleIconWrapper: {
+    width: 20,
+    height: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  googleIconCircle: {
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    backgroundColor: '#FFFFFF',
+    position: 'relative',
+    overflow: 'hidden',
+    borderWidth: 1.5,
+    borderColor: '#E8EAED',
+  },
+  googleIconSegment: {
+    position: 'absolute',
+  },
+  googleIconBlue: {
+    backgroundColor: '#4285F4',
+    top: 0,
+    left: 0,
+    width: 10,
+    height: 10,
+    borderTopLeftRadius: 9,
+  },
+  googleIconRed: {
+    backgroundColor: '#EA4335',
+    top: 0,
+    right: 0,
+    width: 10,
+    height: 10,
+    borderTopRightRadius: 9,
+  },
+  googleIconYellow: {
+    backgroundColor: '#FBBC04',
+    bottom: 0,
+    left: 0,
+    width: 10,
+    height: 10,
+    borderBottomLeftRadius: 9,
+  },
+  googleIconGreen: {
+    backgroundColor: '#34A853',
+    bottom: 0,
+    right: 0,
+    width: 10,
+    height: 10,
+    borderBottomRightRadius: 9,
+  },
+  googleIconCenter: {
+    position: 'absolute',
+    width: 7,
+    height: 7,
+    borderRadius: 3.5,
+    backgroundColor: '#FFFFFF',
+    top: 5.5,
+    left: 5.5,
   },
   googleButtonText: {
-    color: '#000000',
+    color: '#3C4043',
     fontSize: 15,
-    fontFamily: 'SpaceGrotesk-Bold',
-    fontWeight: '600',
+    fontFamily: 'Inter-Medium',
+    fontWeight: '500',
+    letterSpacing: 0.2,
   },
   registerButton: {
     alignItems: 'center',
@@ -417,7 +479,7 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter-Regular',
   },
   signUpText: {
-    color: '#3B82F6',
+    color: '#FF6600',
     fontFamily: 'Inter-SemiBold',
     fontWeight: '600',
   },

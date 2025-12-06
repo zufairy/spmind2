@@ -48,6 +48,7 @@ export default function RegisterScreen() {
     username: false,
     email: false,
   });
+  const [passwordValid, setPasswordValid] = useState(false);
   
   const usernameTimeout = useRef<NodeJS.Timeout | null>(null);
   const emailTimeout = useRef<NodeJS.Timeout | null>(null);
@@ -207,6 +208,13 @@ export default function RegisterScreen() {
         checkEmailAvailability(text);
       }, 150); // Wait 150ms after user stops typing (near-instant response)
     }
+  };
+
+  // Password validation
+  const handlePasswordChange = (text: string) => {
+    setCredentials(prev => ({ ...prev, password: text }));
+    // Check if password meets requirements (min 6 characters)
+    setPasswordValid(text.length >= 6);
   };
 
   // Test Supabase connection on mount
@@ -376,8 +384,10 @@ export default function RegisterScreen() {
 
     setLoading(true);
     try {
-      // Create account with minimal data, onboarding will collect the rest
-      const { user, error } = await register({
+      console.log('🔐 Register: Starting registration...');
+      
+      // Add timeout to prevent endless loading
+      const registrationPromise = register({
         email: credentials.email,
         password: credentials.password,
         full_name: credentials.full_name,
@@ -387,27 +397,46 @@ export default function RegisterScreen() {
         birth_date: '', // Will be collected in onboarding
       });
       
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Registration timeout. Please check your internet connection and try again.')), 30000)
+      );
+      
+      const { user, error } = await Promise.race([registrationPromise, timeoutPromise]) as any;
+      
       if (error) {
+        console.error('❌ Register: Registration error:', error);
+        setLoading(false);
+        
         // Check for specific error types
         const errorMsg = error.toLowerCase();
         
         if (errorMsg.includes('email') && (errorMsg.includes('already') || errorMsg.includes('exists') || errorMsg.includes('taken'))) {
           setErrors({ ...errors, email: 'Email already exists' });
+          Alert.alert('Registration Failed', 'Email already exists. Please use a different email or sign in.');
         } else if (errorMsg.includes('username') && (errorMsg.includes('already') || errorMsg.includes('exists') || errorMsg.includes('taken'))) {
           setErrors({ ...errors, username: 'Username already exists' });
+          Alert.alert('Registration Failed', 'Username already exists. Please choose a different username.');
         } else if (errorMsg.includes('duplicate') || errorMsg.includes('unique')) {
           // Generic duplicate error - check which field
           if (errorMsg.includes('email')) {
             setErrors({ ...errors, email: 'Email already exists' });
+            Alert.alert('Registration Failed', 'Email already exists.');
           } else if (errorMsg.includes('username')) {
             setErrors({ ...errors, username: 'Username already exists' });
+            Alert.alert('Registration Failed', 'Username already exists.');
           } else {
             Alert.alert('Registration Failed', error);
           }
+        } else if (errorMsg.includes('timeout')) {
+          Alert.alert('Registration Timeout', error);
         } else {
           Alert.alert('Registration Failed', error);
         }
-      } else if (user) {
+        return;
+      }
+      
+      if (user) {
+        console.log('✅ Register: Registration successful, user:', user.id);
         // Show success modal with confetti
         setShowSuccessModal(true);
         
@@ -455,21 +484,31 @@ export default function RegisterScreen() {
         
         // Redirect to onboarding after celebration
         setTimeout(() => {
+          setLoading(false);
           router.replace('/onboarding');
         }, 2500);
+      } else {
+        console.warn('⚠️ Register: No user returned from registration');
+        setLoading(false);
+        Alert.alert('Registration Failed', 'Unable to create account. Please try again.');
       }
     } catch (error: any) {
+      console.error('❌ Register: Registration exception:', error);
+      setLoading(false);
+      
       const errorMsg = error.message?.toLowerCase() || '';
       
       if (errorMsg.includes('email') && (errorMsg.includes('already') || errorMsg.includes('exists'))) {
         setErrors({ ...errors, email: 'Email already exists' });
+        Alert.alert('Registration Failed', 'Email already exists. Please use a different email or sign in.');
       } else if (errorMsg.includes('username') && (errorMsg.includes('already') || errorMsg.includes('exists'))) {
         setErrors({ ...errors, username: 'Username already exists' });
+        Alert.alert('Registration Failed', 'Username already exists. Please choose a different username.');
+      } else if (errorMsg.includes('timeout')) {
+        Alert.alert('Registration Timeout', error.message || 'Registration took too long. Please check your internet connection and try again.');
       } else {
-        Alert.alert('Error', error.message || 'Registration failed');
+        Alert.alert('Registration Failed', error.message || 'An unexpected error occurred. Please try again.');
       }
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -547,18 +586,24 @@ export default function RegisterScreen() {
                 </View>
 
                 {/* Password Field */}
-                <View style={styles.inputContainer}>
+                <View style={[
+                  styles.inputContainer,
+                  passwordValid && credentials.password.length > 0 && styles.inputContainerSuccess
+                ]}>
                   <Lock size={18} color="rgba(255, 255, 255, 0.4)" style={styles.inputIcon} />
                   <TextInput
                     style={styles.input}
                     placeholder="Password (min 6 characters)"
                     placeholderTextColor="rgba(255, 255, 255, 0.3)"
                     value={credentials.password}
-                    onChangeText={(text) => setCredentials({ ...credentials, password: text })}
+                    onChangeText={handlePasswordChange}
                     secureTextEntry
                     autoCapitalize="none"
                     autoCorrect={false}
                   />
+                  {passwordValid && credentials.password.length > 0 && (
+                    <Check size={18} color="#00FF00" style={styles.successIcon} />
+                  )}
                 </View>
 
                 {/* Continue Button */}
@@ -579,11 +624,20 @@ export default function RegisterScreen() {
                 <TouchableOpacity
                   style={styles.googleButton}
                   onPress={handleGoogleSignup}
+                  activeOpacity={0.8}
                 >
                   <View style={styles.googleIconContainer}>
-                    <Text style={styles.googleIconText}>G</Text>
+                    <View style={styles.googleIconWrapper}>
+                      <View style={styles.googleIconCircle}>
+                        <View style={[styles.googleIconSegment, styles.googleIconBlue]} />
+                        <View style={[styles.googleIconSegment, styles.googleIconRed]} />
+                        <View style={[styles.googleIconSegment, styles.googleIconYellow]} />
+                        <View style={[styles.googleIconSegment, styles.googleIconGreen]} />
+                        <View style={styles.googleIconCenter} />
+                      </View>
+                    </View>
                   </View>
-                  <Text style={styles.googleButtonText}>Sign Up with Google</Text>
+                  <Text style={styles.googleButtonText}>Continue with Google</Text>
                 </TouchableOpacity>
               </>
             ) : (
@@ -905,37 +959,91 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: '#FFFFFF',
-    borderRadius: 6,
+    borderRadius: 8,
     height: 56,
     marginBottom: 8,
-    gap: 10,
+    gap: 12,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.15)',
+    borderColor: 'rgba(218, 220, 224, 0.3)',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.25,
-    shadowRadius: 16,
-    elevation: 12,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 4,
   },
   googleIconContainer: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: '#4285F4',
+    width: 20,
+    height: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 8,
+  },
+  googleIconWrapper: {
+    width: 20,
+    height: 20,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  googleIconText: {
-    fontSize: 20,
-    fontFamily: 'SpaceGrotesk-Bold',
-    fontWeight: '700',
-    color: '#FFFFFF',
+  googleIconCircle: {
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    backgroundColor: '#FFFFFF',
+    position: 'relative',
+    overflow: 'hidden',
+    borderWidth: 1.5,
+    borderColor: '#E8EAED',
+  },
+  googleIconSegment: {
+    position: 'absolute',
+  },
+  googleIconBlue: {
+    backgroundColor: '#4285F4',
+    top: 0,
+    left: 0,
+    width: 10,
+    height: 10,
+    borderTopLeftRadius: 9,
+  },
+  googleIconRed: {
+    backgroundColor: '#EA4335',
+    top: 0,
+    right: 0,
+    width: 10,
+    height: 10,
+    borderTopRightRadius: 9,
+  },
+  googleIconYellow: {
+    backgroundColor: '#FBBC04',
+    bottom: 0,
+    left: 0,
+    width: 10,
+    height: 10,
+    borderBottomLeftRadius: 9,
+  },
+  googleIconGreen: {
+    backgroundColor: '#34A853',
+    bottom: 0,
+    right: 0,
+    width: 10,
+    height: 10,
+    borderBottomRightRadius: 9,
+  },
+  googleIconCenter: {
+    position: 'absolute',
+    width: 7,
+    height: 7,
+    borderRadius: 3.5,
+    backgroundColor: '#FFFFFF',
+    top: 5.5,
+    left: 5.5,
   },
   googleButtonText: {
-    color: '#000000',
+    color: '#3C4043',
     fontSize: 15,
-    fontFamily: 'SpaceGrotesk-Bold',
-    fontWeight: '600',
+    fontFamily: 'Inter-Medium',
+    fontWeight: '500',
+    letterSpacing: 0.2,
   },
   loginContainer: {
     alignItems: 'center',
@@ -948,7 +1056,7 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter-Regular',
   },
   loginLink: {
-    color: '#3B82F6',
+    color: '#FF6600',
     fontFamily: 'Inter-SemiBold',
     fontWeight: '600',
   },

@@ -54,6 +54,13 @@ import {
   SpaceGrotesk_500Medium,
   SpaceGrotesk_700Bold
 } from '@expo-google-fonts/space-grotesk';
+import {
+  Fredoka_300Light,
+  Fredoka_400Regular,
+  Fredoka_500Medium,
+  Fredoka_600SemiBold,
+  Fredoka_700Bold
+} from '@expo-google-fonts/fredoka';
 import * as SplashScreen from 'expo-splash-screen';
 import { AuthProvider, useAuth } from '../contexts/AuthContext';
 import { ThemeProvider, useTheme } from '../contexts/ThemeContext';
@@ -152,6 +159,11 @@ export default function RootLayout() {
     'SpaceGrotesk-Regular': SpaceGrotesk_400Regular,
     'SpaceGrotesk-Medium': SpaceGrotesk_500Medium,
     'SpaceGrotesk-Bold': SpaceGrotesk_700Bold,
+    'Fredoka-Light': Fredoka_300Light,
+    'Fredoka-Regular': Fredoka_400Regular,
+    'Fredoka-Medium': Fredoka_500Medium,
+    'Fredoka-SemiBold': Fredoka_600SemiBold,
+    'Fredoka-Bold': Fredoka_700Bold,
   });
 
   useEffect(() => {

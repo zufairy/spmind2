@@ -29,6 +29,7 @@ import {
 } from 'lucide-react-native';
 import { useRouter, useFocusEffect } from 'expo-router';
 import * as Animatable from 'react-native-animatable';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { recordingServiceSupabase } from '../../services/recordingServiceSupabase';
 import { RecordingSession, supabase } from '../../services/supabase';
 import { notesService } from '../../services/notesService';
@@ -37,12 +38,15 @@ import CreateNoteModal from '../../components/CreateNoteModal';
 import { LoadingSpinner } from '../../components/LoadingSpinner';
 import { StickyNote } from '../../services/supabase';
 import { useAuth } from '../../contexts/AuthContext';
+import { useTheme } from '../../contexts/ThemeContext';
 
 const { width } = Dimensions.get('window');
 
 export default function NotesPage() {
   const router = useRouter();
   const { user } = useAuth();
+  const { isDark } = useTheme();
+  const insets = useSafeAreaInsets();
   const [searchQuery, setSearchQuery] = useState('');
   const [recordingSessions, setRecordingSessions] = useState<RecordingSession[]>([]);
   const [isRefreshingNotes, setIsRefreshingNotes] = useState(false);
@@ -53,6 +57,7 @@ export default function NotesPage() {
   const [selectedFilter, setSelectedFilter] = useState('Personal');
   const [deletingSessionId, setDeletingSessionId] = useState<string | null>(null);
   const pageFadeAnim = useRef(new Animated.Value(0)).current;
+  const scrollY = useRef(new Animated.Value(0)).current;
 
   // Page fade-in animation on mount (faster for better UX)
   useEffect(() => {
@@ -280,22 +285,94 @@ export default function NotesPage() {
     }, [loadStickyNotes, loadRecordingSessions])
   );
 
+  // Header animation styles based on scroll
+  const headerHeight = scrollY.interpolate({
+    inputRange: [0, 100],
+    outputRange: [80 + insets.top, 60 + insets.top],
+    extrapolate: 'clamp',
+  });
+
+  const headerOpacity = scrollY.interpolate({
+    inputRange: [0, 100],
+    outputRange: [1, 0.95],
+    extrapolate: 'clamp',
+  });
+
+  const titleFontSize = scrollY.interpolate({
+    inputRange: [0, 100],
+    outputRange: [18, 16],
+    extrapolate: 'clamp',
+  });
+
+  const headerBackgroundOpacity = scrollY.interpolate({
+    inputRange: [0, 100],
+    outputRange: [1, 0.8],
+    extrapolate: 'clamp',
+  });
+
+  // Dynamic styles based on theme
+  const dynamicStyles = {
+    container: {
+      backgroundColor: isDark ? '#000000' : '#FFFFFF',
+    },
+    filterText: {
+      color: isDark ? '#FFFFFF' : '#000000',
+    },
+    categoryTabText: {
+      color: '#FFFFFF',
+    },
+    searchContainer: {
+      backgroundColor: isDark ? '#1A1A1A' : '#F5F5F5',
+      borderColor: isDark ? '#333333' : '#E0E0E0',
+    },
+    searchInput: {
+      color: isDark ? '#FFFFFF' : '#000000',
+    },
+    emptyTitle: {
+      color: isDark ? '#FFFFFF' : '#000000',
+    },
+    emptySubtitle: {
+      color: isDark ? '#CCCCCC' : '#666666',
+    },
+    loadingText: {
+      color: isDark ? '#CCCCCC' : '#666666',
+    },
+  };
+
   return (
-    <Animated.View style={[styles.container, { opacity: pageFadeAnim }]}>
-      {/* Header with Background Image - Same as Community */}
-      <View style={styles.header}>
-        <Image 
-          source={require('../../assets/images/bg.jpg')}
-          style={styles.headerBackground}
-          resizeMode="cover"
+    <Animated.View style={[styles.container, dynamicStyles.container, { opacity: pageFadeAnim }]}>
+      {/* Header with Dark Background and Glassmorphism on Scroll */}
+      <Animated.View style={[styles.header, { height: headerHeight, opacity: headerOpacity }]}>
+        <Animated.View 
+          style={[
+            styles.headerDarkBackground,
+            { opacity: headerBackgroundOpacity }
+          ]} 
         />
-        <BlurView intensity={10} style={styles.headerBlurOverlay} />
-        <View style={styles.headerContent}>
+        <Animated.View
+          style={[
+            styles.headerBlurOverlay,
+            {
+              opacity: scrollY.interpolate({
+                inputRange: [0, 100],
+                outputRange: [0, 1],
+                extrapolate: 'clamp',
+              }),
+            }
+          ]}
+        >
+          <BlurView intensity={20} style={StyleSheet.absoluteFill} />
+        </Animated.View>
+        <Animated.View style={[styles.headerContent, { paddingTop: scrollY.interpolate({
+          inputRange: [0, 100],
+          outputRange: [insets.top + 20, insets.top + 10],
+          extrapolate: 'clamp',
+        }) }]}>
           <View style={styles.headerCenter}>
-            <Text style={styles.headerTitle}>Your Notes</Text>
+            <Animated.Text style={[styles.headerTitle, { fontSize: titleFontSize }]}>Notetaker</Animated.Text>
           </View>
-        </View>
-      </View>
+        </Animated.View>
+      </Animated.View>
 
       <KeyboardAvoidingView 
         style={styles.container} 
@@ -309,7 +386,7 @@ export default function NotesPage() {
             style={styles.newSessionButton}
             onPress={() => router.push('/record')}
           >
-            <Plus size={20} color="#000000" />
+            <Plus size={20} color="#FFFFFF" />
             <Text style={styles.newSessionButtonText}>New</Text>
           </TouchableOpacity>
           
@@ -322,18 +399,23 @@ export default function NotesPage() {
           </TouchableOpacity>
         </View>
 
-      <ScrollView
+      <Animated.ScrollView
         style={styles.scrollContainer}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
         contentContainerStyle={styles.scrollContent}
+        onScroll={Animated.event(
+          [{ nativeEvent: { contentOffset: { y: scrollY } } }],
+          { useNativeDriver: false }
+        )}
+        scrollEventThrottle={16}
       >
 
         {/* Filter Section */}
         <View style={styles.filterSection}>
           <TouchableOpacity style={styles.filterDropdown}>
-            <Text style={styles.filterText}>{selectedFilter}</Text>
-            <ChevronDown size={16} color="#FFFFFF" />
+            <Text style={[styles.filterText, dynamicStyles.filterText]}>{selectedFilter}</Text>
+            <ChevronDown size={16} color={isDark ? "#FFFFFF" : "#000000"} />
             </TouchableOpacity>
 
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.categoryTabs}>
@@ -348,6 +430,7 @@ export default function NotesPage() {
               >
                 <Text style={[
                   styles.categoryTabText,
+                  dynamicStyles.categoryTabText,
                   selectedCategory === category && styles.categoryTabTextActive
                 ]}>
                   #{category}
@@ -359,12 +442,12 @@ export default function NotesPage() {
 
         {/* Search Box */}
         <View style={styles.searchSection}>
-          <View style={styles.searchContainer}>
+          <View style={[styles.searchContainer, dynamicStyles.searchContainer]}>
             <Search size={20} color="#CCCCCC" />
             <TextInput
-              style={styles.searchInput}
+              style={[styles.searchInput, dynamicStyles.searchInput]}
               placeholder="Search your notes..."
-              placeholderTextColor="#999999"
+              placeholderTextColor={isDark ? "#999999" : "#CCCCCC"}
               value={searchQuery}
               onChangeText={setSearchQuery}
             />
@@ -379,14 +462,14 @@ export default function NotesPage() {
                      {loading ? (
              <View style={styles.loadingContainer}>
                 <LoadingSpinner size={40} color="#667eea" />
-               <Text style={styles.loadingText}>Loading your notes...</Text>
+               <Text style={[styles.loadingText, dynamicStyles.loadingText]}>Loading your notes...</Text>
              </View>
            ) : filteredStickyNotes && Array.isArray(filteredStickyNotes) && filteredStickyNotes.length === 0 ? (
              <View style={styles.emptyContainer}>
-               <Text style={styles.emptyTitle}>
+               <Text style={[styles.emptyTitle, dynamicStyles.emptyTitle]}>
                  {searchQuery.trim() ? 'No notes found' : 'No notes yet'}
                </Text>
-               <Text style={styles.emptySubtitle}>
+               <Text style={[styles.emptySubtitle, dynamicStyles.emptySubtitle]}>
                  {searchQuery.trim() ? `No notes match "${searchQuery}"` : 'Create your first note to get started!'}
                </Text>
              </View>
@@ -441,7 +524,7 @@ export default function NotesPage() {
           onClose={() => setShowCreateNoteModal(false)}
           onNoteCreated={handleNoteCreated}
         />
-      </ScrollView>
+      </Animated.ScrollView>
     </KeyboardAvoidingView>
     </Animated.View>
   );
@@ -450,7 +533,6 @@ export default function NotesPage() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#000000',
   },
   scrollContainer: {
     flex: 1,
@@ -536,8 +618,7 @@ const styles = StyleSheet.create({
   },
   filterText: {
     fontSize: 16,
-    color: '#FFFFFF',
-    fontFamily: 'Inter-Medium',
+    fontFamily: 'Fredoka-Medium',
     marginRight: 8,
   },
   categoryTabs: {
@@ -558,9 +639,8 @@ const styles = StyleSheet.create({
   },
   categoryTabText: {
     fontSize: 14,
-    color: '#FFFFFF',
-    fontFamily: 'Inter-SemiBold',
-    fontWeight: '600',
+    fontFamily: 'Fredoka-Medium',
+    fontWeight: '500',
     letterSpacing: 0.3,
   },
   categoryTabTextActive: {
@@ -573,7 +653,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: 12,
     paddingBottom: 10,
-    backgroundColor: '#000000',
+    backgroundColor: 'transparent',
     marginTop: 16,
     marginBottom: 16,
     gap: 12,
@@ -594,20 +674,17 @@ const styles = StyleSheet.create({
   searchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#1A1A1A',
     borderRadius: 12,
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderWidth: 1,
-    borderColor: '#333333',
   },
   searchInput: {
     flex: 1,
     marginLeft: 12,
     fontSize: 16,
-    color: '#FFFFFF',
-    fontFamily: 'Inter-Medium',
-    fontWeight: '500',
+    fontFamily: 'Fredoka-Regular',
+    fontWeight: '400',
     letterSpacing: 0.2,
   },
   titleSection: {
@@ -623,17 +700,22 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#FFD700',
+    backgroundColor: '#58CC02',
     paddingVertical: 16,
     paddingHorizontal: 24,
-    borderRadius: 2,
+    borderRadius: 12,
     minHeight: 54,
     gap: 8,
-    shadowColor: '#FFD700',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 6,
+    borderBottomWidth: 4,
+    borderBottomColor: '#47A302',
+    borderRightWidth: 0,
+    borderLeftWidth: 0,
+    borderTopWidth: 0,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
   plusIconContainer: {
     width: 24,
@@ -646,23 +728,29 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   newSessionButtonText: {
-    color: '#000000',
-    fontSize: 16,
-    fontFamily: 'SpaceGrotesk-Bold',
+    color: '#FFFFFF',
+    fontSize: 18,
+    fontFamily: 'Fredoka-Bold',
     fontWeight: '700',
     letterSpacing: 0.5,
+    textTransform: 'uppercase',
   },
   previousRecordingsButton: {
     flex: 2,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.3)',
+    backgroundColor: '#1CB0F6',
     paddingVertical: 16,
     paddingHorizontal: 24,
-    borderRadius: 2,
+    borderRadius: 12,
     gap: 8,
     minHeight: 54,
+    borderBottomWidth: 4,
+    borderBottomColor: '#1899D6',
+    borderRightWidth: 0,
+    borderLeftWidth: 0,
+    borderTopWidth: 0,
     shadowColor: '#000000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
@@ -671,10 +759,11 @@ const styles = StyleSheet.create({
   },
   previousRecordingsButtonText: {
     color: '#FFFFFF',
-    fontSize: 16,
-    fontFamily: 'SpaceGrotesk-Bold',
+    fontSize: 18,
+    fontFamily: 'Fredoka-Bold',
     fontWeight: '700',
     letterSpacing: 0.5,
+    textTransform: 'uppercase',
   },
   notesSection: {
     paddingHorizontal: 20,
@@ -793,9 +882,8 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     fontSize: 16,
-    color: '#CCCCCC',
     marginTop: 12,
-    fontFamily: 'Inter-Regular',
+    fontFamily: 'Fredoka-Regular',
   },
   emptyContainer: {
     flex: 1,
@@ -805,26 +893,23 @@ const styles = StyleSheet.create({
   },
   emptyTitle: {
     fontSize: 20,
-    fontWeight: '700',
-    color: '#FFFFFF',
+    fontWeight: '600',
     marginBottom: 8,
-    fontFamily: 'Inter-Bold',
+    fontFamily: 'Fredoka-SemiBold',
     letterSpacing: 0.3,
   },
   emptySubtitle: {
     fontSize: 16,
-    color: '#CCCCCC',
     textAlign: 'center',
-    fontFamily: 'Inter-Medium',
-    fontWeight: '500',
+    fontFamily: 'Fredoka-Regular',
+    fontWeight: '400',
     letterSpacing: 0.2,
     lineHeight: 22,
   },
-  // Header styles - Same as Community page
+  // Header styles with dark background and glassmorphism
   header: {
     position: 'relative',
     overflow: 'hidden',
-    height: 90,
     zIndex: 100,
     marginBottom: 0,
     shadowColor: '#000000',
@@ -833,7 +918,7 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 8,
   },
-  headerBackground: {
+  headerDarkBackground: {
     position: 'absolute',
     top: 0,
     left: 0,
@@ -841,6 +926,7 @@ const styles = StyleSheet.create({
     bottom: 0,
     width: '100%',
     height: '100%',
+    backgroundColor: '#000000',
     zIndex: 1,
   },
   headerBlurOverlay: {
@@ -857,8 +943,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 20,
-    paddingTop: 45,
-    paddingBottom: 10,
+    paddingBottom: 8,
     position: 'relative',
     zIndex: 200,
     pointerEvents: 'box-none',
@@ -871,19 +956,9 @@ const styles = StyleSheet.create({
     pointerEvents: 'box-none',
   },
   headerTitle: {
-    fontSize: 28,
-    fontFamily: 'Inter-Bold',
+    fontFamily: 'Fredoka-SemiBold',
+    fontWeight: '600',
+    letterSpacing: 0.3,
     color: '#FFFFFF',
-    fontWeight: '800',
-    letterSpacing: 0.5,
-    // Premium drop shadow style
-    textShadowColor: 'rgba(0, 0, 0, 0.8)',
-    textShadowOffset: { width: 0, height: 2 },
-    textShadowRadius: 4,
-    // Additional shadow for depth
-    shadowColor: 'rgba(0, 0, 0, 0.5)',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 1,
-    shadowRadius: 6,
   },
 }); 
