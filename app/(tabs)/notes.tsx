@@ -300,7 +300,7 @@ export default function NotesPage() {
 
   const titleFontSize = scrollY.interpolate({
     inputRange: [0, 100],
-    outputRange: [18, 16],
+    outputRange: [20, 20],
     extrapolate: 'clamp',
   });
 
@@ -540,11 +540,6 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     flexGrow: 1,
-  },
-  header: {
-    paddingTop: 60,
-    paddingHorizontal: 20,
-    paddingBottom: 0,
   },
   headerTop: {
     flexDirection: 'row',
@@ -916,13 +911,14 @@ const styles = StyleSheet.create({
   header: {
     position: 'relative',
     overflow: 'hidden',
-    zIndex: 100,
+    zIndex: 1000,
     marginBottom: 0,
     shadowColor: '#000000',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
-    elevation: 8,
+    elevation: 1000,
+    backgroundColor: '#000000',
   },
   headerDarkBackground: {
     position: 'absolute',
@@ -962,6 +958,7 @@ const styles = StyleSheet.create({
     pointerEvents: 'box-none',
   },
   headerTitle: {
+    fontSize: 20,
     fontFamily: 'Fredoka-SemiBold',
     fontWeight: '600',
     letterSpacing: 0.3,
