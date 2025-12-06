@@ -516,8 +516,12 @@ export default function ProfileScreen() {
             setSettingsVisible(false);
             try {
               await logout();
+              // Navigate to login page after logout
+              router.replace('/auth/login');
             } catch (error) {
               console.error('Logout error:', error);
+              // Still navigate to login even if there's an error
+              router.replace('/auth/login');
             }
           },
         },

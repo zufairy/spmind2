@@ -33,6 +33,7 @@ export default function RecordPage() {
   const [isListening, setIsListening] = useState(false);
   const [speechError, setSpeechError] = useState<string | null>(null);
   const [language, setLanguage] = useState<'BM' | 'BI'>('BM');
+  const [hasMicPermission, setHasMicPermission] = useState<boolean | null>(null);
   
   const timeInterval = useRef<ReturnType<typeof setInterval> | null>(null);
   const transcriptionInterval = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -40,6 +41,27 @@ export default function RecordPage() {
   const audioLevelAnimation = useRef(new Animated.Value(0)).current;
   const pulseAnimation = useRef(new Animated.Value(1)).current;
   const blinkAnimation = useRef(new Animated.Value(1)).current;
+
+  // Check mic permissions on mount and when page is focused
+  useEffect(() => {
+    checkMicPermissions();
+  }, []);
+
+  const checkMicPermissions = async () => {
+    try {
+      const hasPermission = await recordingServiceSupabase.requestPermissions();
+      setHasMicPermission(hasPermission);
+      
+      if (!hasPermission) {
+        console.log('⚠️ Microphone permission not granted');
+      } else {
+        console.log('✅ Microphone permission granted');
+      }
+    } catch (error) {
+      console.error('Error checking mic permissions:', error);
+      setHasMicPermission(false);
+    }
+  };
 
   // Timer for recording
   useEffect(() => {
@@ -156,11 +178,52 @@ export default function RecordPage() {
 
   const startRecording = async () => {
     try {
+      // Check and request permissions first
+      if (hasMicPermission === false) {
+        const permissionGranted = await recordingServiceSupabase.requestPermissions();
+        setHasMicPermission(permissionGranted);
+        
+        if (!permissionGranted) {
+          Alert.alert(
+            'Microphone Permission Required',
+            'Please grant microphone permission to record audio. You can enable it in your device settings.',
+            [
+              { text: 'Cancel', style: 'cancel' },
+              { text: 'Request Again', onPress: checkMicPermissions }
+            ]
+          );
+          return;
+        }
+      }
+
       // Start audio recording
+      console.log('🎤 Starting recording...');
       const success = await recordingServiceSupabase.startRecording();
+      
       if (!success) {
-        Alert.alert('Error', 'Failed to start recording. Please check microphone permissions.');
-        return;
+        // Try requesting permission again if recording failed
+        console.log('🔄 Recording failed, checking permissions again...');
+        const permissionGranted = await recordingServiceSupabase.requestPermissions();
+        setHasMicPermission(permissionGranted);
+        
+        if (!permissionGranted) {
+          Alert.alert(
+            'Microphone Permission Required',
+            'Please grant microphone permission to record audio. You can enable it in your device settings.',
+            [
+              { text: 'Cancel', style: 'cancel' },
+              { text: 'Request Again', onPress: checkMicPermissions }
+            ]
+          );
+          return;
+        }
+        
+        // Try recording again after permission is granted
+        const retrySuccess = await recordingServiceSupabase.startRecording();
+        if (!retrySuccess) {
+          Alert.alert('Error', 'Failed to start recording. Please check microphone permissions and try again.');
+          return;
+        }
       }
 
       // Start real-time transcription simulation
@@ -172,8 +235,10 @@ export default function RecordPage() {
       setRecordingTime(0);
       startRecordingTimer();
       
+      console.log('✅ Recording started successfully');
+      
     } catch (error) {
-      console.error('Error starting recording:', error);
+      console.error('❌ Error starting recording:', error);
       Alert.alert('Error', 'Failed to start recording. Please try again.');
     }
   };
@@ -247,8 +312,19 @@ export default function RecordPage() {
       
       let errorMessage = 'An unexpected error occurred while processing the recording.';
       if (error instanceof Error) {
-        errorMessage = `Error: ${error.message}`;
+        errorMessage = error.message;
+        
+        // Provide more specific error messages
+        if (error.message.includes('Session was not created')) {
+          errorMessage = 'Recording error: Session was not created. Please try again.';
+        } else if (error.message.includes('Failed to create session')) {
+          errorMessage = 'Recording error: Failed to create session. Please check your connection and try again.';
+        } else if (error.message.includes('not authenticated')) {
+          errorMessage = 'Please log in to save your recording.';
+        }
       }
+      
+      console.error('Recording error details:', error);
       
       Alert.alert(
         'Recording Error', 
@@ -346,7 +422,7 @@ export default function RecordPage() {
       <StatusBar barStyle="light-content" backgroundColor="#000000" />
       
       {/* Header with Black Background */}
-      <View style={[styles.header, { paddingTop: insets.top }]}>
+      <View style={styles.header}>
         <View style={styles.headerContent}>
           <View style={styles.headerLeft}>
             <TouchableOpacity 
@@ -525,12 +601,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 20,
-    paddingTop: 12,
-    paddingBottom: 12,
+    paddingTop: 50,
+    paddingBottom: 20,
     position: 'relative',
     zIndex: 200,
     pointerEvents: 'box-none',
-    minHeight: 60,
   },
   headerLeft: {
     width: 44,
@@ -570,10 +645,11 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   headerLogo: {
-    fontSize: 24,
+    fontSize: 20,
     fontFamily: 'Fredoka-SemiBold',
     color: '#FFFFFF',
     fontWeight: '600',
+    letterSpacing: 0.3,
   },
   aiIndicator: {
     alignItems: 'center',

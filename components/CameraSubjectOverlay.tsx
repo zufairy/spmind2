@@ -159,7 +159,7 @@ export default function CameraSubjectOverlay({
             activeOpacity={0.8}
           >
             <Image 
-              source={require('../assets/images/snap.png')} 
+              source={require('../assets/images/cameratake.png')} 
               style={styles.shutterImage}
               resizeMode="contain"
             />
@@ -238,8 +238,8 @@ const styles = StyleSheet.create({
     elevation: 15,
   },
   shutterImage: {
-    width: 100,
-    height: 100,
+    width: 90,
+    height: 90,
     zIndex: 10,
   },
   shutterTouchable: {

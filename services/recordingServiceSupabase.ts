@@ -87,10 +87,41 @@ class RecordingServiceSupabase {
 
   async requestPermissions(): Promise<boolean> {
     try {
+      console.log('🎤 Requesting microphone permissions...');
+      
+      // First check current status
+      const { status: currentStatus } = await Audio.getPermissionsAsync();
+      console.log('📊 Current permission status:', currentStatus);
+      
+      if (currentStatus === 'granted') {
+        console.log('✅ Microphone permission already granted');
+        return true;
+      }
+      
+      // Request permission
       const { status } = await Audio.requestPermissionsAsync();
+      console.log('📊 Permission request result:', status);
+      
+      const granted = status === 'granted';
+      if (granted) {
+        console.log('✅ Microphone permission granted');
+      } else {
+        console.log('❌ Microphone permission denied');
+      }
+      
+      return granted;
+    } catch (error) {
+      console.error('❌ Error requesting audio permissions:', error);
+      return false;
+    }
+  }
+
+  async checkPermissions(): Promise<boolean> {
+    try {
+      const { status } = await Audio.getPermissionsAsync();
       return status === 'granted';
     } catch (error) {
-      console.error('Error requesting audio permissions:', error);
+      console.error('Error checking audio permissions:', error);
       return false;
     }
   }
@@ -345,6 +376,7 @@ class RecordingServiceSupabase {
     // Declare variables outside try block for error handling
     let audioUri: string | null = null;
     let recordingDuration: number = 0;
+    let currentUser: any = null;
 
     try {
         const uri = this.recording.getURI();
@@ -362,15 +394,17 @@ class RecordingServiceSupabase {
         audioUri = uri;
         recordingDuration = duration;
 
-        console.log('Recording stopped, processing audio file:', uri);
-        console.log('Audio URI type:', typeof uri);
-        console.log('Audio URI format:', uri?.substring(0, 50) + '...');
+        console.log('✅ Recording stopped, processing audio file:', uri);
+        console.log('📁 Audio URI type:', typeof uri);
+        console.log('📁 Audio URI format:', uri?.substring(0, 50) + '...');
 
-        // Save to Supabase
-        const currentUser = await authService.getCurrentUser();
+        // Get user first - required for session creation
+        currentUser = await authService.getCurrentUser();
         if (!currentUser) {
           throw new Error('User not authenticated');
         }
+
+        console.log('👤 User authenticated:', currentUser.id);
 
         // Process audio with AI to generate transcript, summary, and notes
         // This will automatically use chunking for large files (>20MB or >8 minutes)
@@ -378,111 +412,329 @@ class RecordingServiceSupabase {
         console.log('📁 Audio URI:', uri);
         console.log('⏱️ Recording duration:', duration, 'ms');
         
-        const aiResults = await aiProcessingService.processAudio(uri, onProgress);
+        let aiResults: any = {
+          transcript: '',
+          summary: '',
+          stickyNotes: []
+        };
+
+        // Try AI processing with fallback
+        try {
+          aiResults = await aiProcessingService.processAudio(uri, onProgress);
+          console.log('✅ AI processing completed:', {
+            transcriptLength: aiResults.transcript?.length || 0,
+            summaryLength: aiResults.summary?.length || 0,
+            stickyNotesCount: aiResults.stickyNotes?.length || 0
+          });
+        } catch (aiError) {
+          console.error('⚠️ AI processing failed, using fallback:', aiError);
+          // Create fallback content if AI processing fails
+          aiResults = {
+            transcript: 'Audio recording completed. Transcription unavailable.',
+            summary: 'Recording session completed successfully.',
+            stickyNotes: [{
+              title: 'Recording Complete',
+              content: 'Your recording has been saved successfully.',
+              type: 'important',
+              color: 'yellow',
+              priority: 'medium'
+            }]
+          };
+          console.log('📝 Using fallback content for session');
+        }
 
         // Create recording session with AI-generated content
-        const { data: sessionData, error: sessionError } = await supabase
-          .from('recording_sessions')
-          .insert([
-            {
-              user_id: currentUser.id,
-              title: `Study Session - ${new Date().toLocaleDateString()}`,
-              description: `Recording session`,
-              audio_uri: uri,
-              duration,
-              transcript: aiResults.transcript,
-              summary: aiResults.summary,
-              subjects: ['General Study'],
-              tags: ['recording'],
-            }
-          ])
-          .select()
-          .single();
-
-      if (sessionError) {
-        console.error('Error creating recording session:', sessionError);
-        console.error('Error details:', JSON.stringify(sessionError));
+        // Use robust algorithm with multiple retry attempts
+        let sessionData: any = null;
         
-        // Retry once after a short delay
-        console.log('Retrying session creation...');
-        await new Promise(resolve => setTimeout(resolve, 1000));
+        // Prepare session data with safe defaults
+        const sessionPayload = {
+          user_id: currentUser.id,
+          title: `Study Session - ${new Date().toLocaleDateString()}`,
+          description: `Recording session`,
+          audio_uri: uri,
+          duration,
+          transcript: aiResults.transcript || 'Recording completed',
+          summary: aiResults.summary || 'Recording session saved successfully',
+          subjects: ['General Study'],
+          tags: ['recording'],
+        };
         
-        const { data: retrySessionData, error: retryError } = await supabase
-          .from('recording_sessions')
-          .insert([
-            {
-              user_id: currentUser.id,
-              title: `Study Session - ${new Date().toLocaleDateString()}`,
-              description: `Recording session`,
-              audio_uri: uri,
-              duration,
-              transcript: aiResults.transcript,
-              summary: aiResults.summary,
-              subjects: ['General Study'],
-              tags: ['recording'],
-            }
-          ])
-          .select()
-          .single();
+        console.log('📝 Creating session with payload:', {
+          user_id: sessionPayload.user_id,
+          title: sessionPayload.title,
+          duration: sessionPayload.duration,
+          transcriptLength: sessionPayload.transcript?.length || 0,
+          summaryLength: sessionPayload.summary?.length || 0,
+        });
+        
+        // Robust session creation with multiple retry attempts
+        const sessionMaxRetries = 3;
+        let lastError: any = null;
+        
+        for (let attempt = 1; attempt <= sessionMaxRetries; attempt++) {
+          console.log(`🔄 Session creation attempt ${attempt}/${sessionMaxRetries}...`);
+          
+          try {
+            // First, try insert with select
+            const { data: attemptData, error: attemptError } = await supabase
+              .from('recording_sessions')
+              .insert([sessionPayload])
+              .select()
+              .single();
 
-        if (retryError) {
-          console.error('Retry also failed:', retryError);
-          throw new Error(`Failed to create session: ${retryError.message}`);
+            console.log(`📝 Attempt ${attempt} result:`, {
+              hasData: !!attemptData,
+              hasError: !!attemptError,
+              dataId: attemptData?.id,
+              errorMessage: attemptError?.message,
+              errorCode: attemptError?.code,
+              errorDetails: attemptError?.details,
+              fullError: attemptError ? JSON.stringify(attemptError, null, 2) : null,
+            });
+
+            if (attemptError) {
+              lastError = attemptError;
+              console.error(`❌ Attempt ${attempt} error:`, attemptError);
+              console.error(`❌ Error code:`, attemptError.code);
+              console.error(`❌ Error details:`, attemptError.details);
+              console.error(`❌ Error hint:`, attemptError.hint);
+              
+              // If not the last attempt, wait and retry
+              if (attempt < sessionMaxRetries) {
+                const waitTime = attempt * 1000; // Exponential backoff
+                console.log(`⏳ Waiting ${waitTime}ms before retry...`);
+                await new Promise(resolve => setTimeout(resolve, waitTime));
+                continue;
+              }
+            } else if (attemptData && attemptData.id) {
+              // Success!
+              sessionData = attemptData;
+              console.log(`✅ Session created successfully on attempt ${attempt}:`, sessionData.id);
+              break;
+            } else {
+              // Data is null or missing id - try querying by user_id and audio_uri as fallback
+              console.warn(`⚠️ Attempt ${attempt} returned null data, trying to query by audio_uri...`);
+              
+              // Wait a moment for database to sync
+              await new Promise(resolve => setTimeout(resolve, 1000));
+              
+              // Try to find the session we just created - use array result instead of single
+              const { data: queriedDataArray, error: queryError } = await supabase
+                .from('recording_sessions')
+                .select('id, user_id, title, description, audio_uri, duration, transcript, summary, subjects, tags, created_at, updated_at')
+                .eq('user_id', currentUser.id)
+                .eq('audio_uri', uri)
+                .order('created_at', { ascending: false })
+                .limit(1);
+              
+              console.log(`🔍 Query result:`, {
+                hasData: !!queriedDataArray,
+                isArray: Array.isArray(queriedDataArray),
+                arrayLength: queriedDataArray?.length,
+                hasError: !!queryError,
+                firstItemId: queriedDataArray?.[0]?.id,
+                fullData: queriedDataArray,
+              });
+              
+              // Handle both array and single object responses
+              const queriedData = Array.isArray(queriedDataArray) ? queriedDataArray[0] : queriedDataArray;
+              
+              if (queriedData && queriedData.id) {
+                sessionData = queriedData;
+                console.log(`✅ Session found via query on attempt ${attempt}:`, sessionData.id);
+                break;
+              } else if (queriedData && !queriedData.id) {
+                console.error(`⚠️ Query returned data but missing id:`, queriedData);
+                // Try to get id from a different query
+                const { data: idQueryData } = await supabase
+                  .from('recording_sessions')
+                  .select('id')
+                  .eq('user_id', currentUser.id)
+                  .eq('audio_uri', uri)
+                  .order('created_at', { ascending: false })
+                  .limit(1)
+                  .single();
+                
+                if (idQueryData && idQueryData.id) {
+                  sessionData = { ...queriedData, id: idQueryData.id };
+                  console.log(`✅ Session id found via separate query:`, sessionData.id);
+                  break;
+                }
+              }
+              
+              // Still no data
+              lastError = { message: 'Session data is null or missing id after insert and query' };
+              console.error(`❌ Attempt ${attempt} returned null data and query also failed`);
+              
+              if (attempt < sessionMaxRetries) {
+                const waitTime = attempt * 1000;
+                console.log(`⏳ Waiting ${waitTime}ms before retry...`);
+                await new Promise(resolve => setTimeout(resolve, waitTime));
+                continue;
+              }
+            }
+          } catch (insertError) {
+            lastError = insertError;
+            console.error(`❌ Attempt ${attempt} exception:`, insertError);
+            if (insertError instanceof Error) {
+              console.error(`❌ Exception message:`, insertError.message);
+              console.error(`❌ Exception stack:`, insertError.stack);
+            }
+            
+            if (attempt < sessionMaxRetries) {
+              const waitTime = attempt * 1000;
+              console.log(`⏳ Waiting ${waitTime}ms before retry...`);
+              await new Promise(resolve => setTimeout(resolve, waitTime));
+              continue;
+            }
+          }
+        }
+
+        // Final validation - if still no session, try one more time with minimal data
+        if (!sessionData || !sessionData.id) {
+          console.error('❌ All retry attempts failed, trying minimal session creation...');
+          
+          // Try with absolute minimal required fields
+          const minimalPayload = {
+            user_id: currentUser.id,
+            title: `Study Session - ${new Date().toLocaleDateString()}`,
+            description: 'Recording session',
+            audio_uri: uri,
+            duration: duration,
+            transcript: '',
+            summary: '',
+            subjects: [],
+            tags: [],
+          };
+          
+          const { data: minimalData, error: minimalError } = await supabase
+            .from('recording_sessions')
+            .insert([minimalPayload])
+            .select()
+            .single();
+          
+          if (minimalError || !minimalData || !minimalData.id) {
+            console.error('❌ Minimal session creation also failed:', minimalError);
+            throw new Error(`Failed to create session after ${sessionMaxRetries} attempts: ${lastError?.message || 'Unknown error'}`);
+          }
+          
+          sessionData = minimalData;
+          console.log('✅ Minimal session created successfully:', sessionData.id);
+        }
+      
+      console.log('✅ Session validated successfully:', {
+        id: sessionData.id,
+        title: sessionData.title,
+        hasTranscript: !!sessionData.transcript,
+        hasSummary: !!sessionData.summary,
+      });
+
+      // Create sticky notes for this session - always try to create at least one
+      try {
+        const stickyNotesToCreate = aiResults.stickyNotes || [];
+        
+        // If no sticky notes from AI, create a default one
+        if (stickyNotesToCreate.length === 0) {
+          console.log('📝 No sticky notes from AI, creating default note...');
+          stickyNotesToCreate.push({
+            title: 'Recording Saved',
+            content: 'Your recording has been saved successfully.',
+            type: 'important',
+            color: 'yellow',
+            priority: 'medium'
+          });
         }
         
-        // Use the retry session data
-        const sessionData = retrySessionData;
-      }
-
-      // Ensure we have sessionData before creating sticky notes
-      if (!sessionData || !sessionData.id) {
-        throw new Error('Session was not created successfully');
-      }
-
-      // Create sticky notes for this session
-      try {
-        console.log(`Creating ${aiResults.stickyNotes.length} sticky notes for session ${sessionData.id}`);
+        const sessionId = sessionData.id; // Get session ID once
+        console.log(`📝 Creating ${stickyNotesToCreate.length} sticky notes for session ${sessionId}`);
         
-        if (aiResults.stickyNotes && aiResults.stickyNotes.length > 0) {
+        if (stickyNotesToCreate.length > 0) {
           // Insert all sticky notes at once for better performance
-          const stickyNotesToInsert = aiResults.stickyNotes.map(noteData => ({
-            session_id: sessionData.id,
-            user_id: currentUser.id,
-            title: noteData.title || 'Untitled Note',
-            content: noteData.content || '',
-            type: noteData.type || 'note',
-            color: noteData.color || '#FFD700',
-            priority: noteData.priority || 'medium',
-            completed: false,
-            image: null,
-          }));
+          // Validate and map colors to allowed values
+          const allowedColors = ['yellow', 'pink', 'green', 'blue', 'purple', 'orange', 'red'];
+          const allowedTypes = ['task', 'focus', 'important', 'todo', 'reminder', 'exam', 'deadline', 'formula', 'definition', 'tip'];
+          
+          const stickyNotesToInsert = stickyNotesToCreate.map(noteData => {
+            // Validate color - use 'yellow' as default if invalid
+            let validColor = noteData.color || 'yellow';
+            if (!allowedColors.includes(validColor)) {
+              console.warn(`Invalid color "${validColor}", defaulting to "yellow"`);
+              validColor = 'yellow';
+            }
+            
+            // Validate type - use 'important' as default if invalid
+            let validType = noteData.type || 'important';
+            if (!allowedTypes.includes(validType)) {
+              console.warn(`Invalid type "${validType}", defaulting to "important"`);
+              validType = 'important';
+            }
+            
+            return {
+              session_id: sessionId, // Use the validated sessionId
+              user_id: currentUser.id,
+              title: noteData.title || 'Untitled Note',
+              content: noteData.content || '',
+              type: validType,
+              color: validColor,
+              priority: noteData.priority || 'medium',
+              completed: false,
+              image: null,
+            };
+          });
+
+          console.log(`📝 Inserting ${stickyNotesToInsert.length} sticky notes with session_id: ${sessionId}`);
+          console.log(`📝 First note preview:`, {
+            session_id: stickyNotesToInsert[0]?.session_id,
+            title: stickyNotesToInsert[0]?.title,
+            type: stickyNotesToInsert[0]?.type,
+            color: stickyNotesToInsert[0]?.color,
+          });
 
           const { data: insertedNotes, error: stickyNoteError } = await supabase
             .from('session_sticky_notes')
             .insert(stickyNotesToInsert)
-            .select();
+            .select('id, session_id, title, content, type, color, priority');
 
           if (stickyNoteError) {
             console.error('Error creating sticky notes:', stickyNoteError);
             // Try inserting one by one as fallback
             console.log('Trying to insert sticky notes one by one...');
-            for (const noteData of aiResults.stickyNotes) {
+            // Validate colors and types for individual insertions
+            const allowedColors = ['yellow', 'pink', 'green', 'blue', 'purple', 'orange', 'red'];
+            const allowedTypes = ['task', 'focus', 'important', 'todo', 'reminder', 'exam', 'deadline', 'formula', 'definition', 'tip'];
+            
+            for (const noteData of stickyNotesToCreate) {
               try {
-                const { error: singleNoteError } = await supabase
+                // Validate color
+                let validColor = noteData.color || 'yellow';
+                if (!allowedColors.includes(validColor)) {
+                  validColor = 'yellow';
+                }
+                
+                // Validate type
+                let validType = noteData.type || 'important';
+                if (!allowedTypes.includes(validType)) {
+                  validType = 'important';
+                }
+                
+                console.log(`📝 Inserting individual note with session_id: ${sessionId}`);
+                const { data: singleNoteData, error: singleNoteError } = await supabase
                   .from('session_sticky_notes')
                   .insert([
                     {
-                      session_id: sessionData.id,
+                      session_id: sessionId, // Use the validated sessionId
                       user_id: currentUser.id,
                       title: noteData.title || 'Untitled Note',
                       content: noteData.content || '',
-                      type: noteData.type || 'note',
-                      color: noteData.color || '#FFD700',
+                      type: validType,
+                      color: validColor,
                       priority: noteData.priority || 'medium',
                       completed: false,
                       image: null,
                     }
-                  ]);
+                  ])
+                  .select('id, session_id, title');
 
                 if (singleNoteError) {
                   console.error('Error creating individual sticky note:', singleNoteError);
@@ -513,10 +765,10 @@ class RecordingServiceSupabase {
       // Verify the session exists with retry logic
       let verifySession = await this.getSessionById(sessionData.id);
       let retryCount = 0;
-      const maxRetries = 5;
+      const verifyMaxRetries = 5;
       
-      while (!verifySession && retryCount < maxRetries) {
-        console.log(`Session verification attempt ${retryCount + 1}/${maxRetries}...`);
+      while (!verifySession && retryCount < verifyMaxRetries) {
+        console.log(`Session verification attempt ${retryCount + 1}/${verifyMaxRetries}...`);
         await new Promise(resolve => setTimeout(resolve, 1000 * (retryCount + 1)));
         verifySession = await this.getSessionById(sessionData.id);
         retryCount++;
