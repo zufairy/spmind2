@@ -760,7 +760,7 @@ class AuthService {
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: 'https://auth.expo.io/@rithdan/geniusapp',
+          redirectTo: 'https://auth.expo.io/@rithdan/spmindapp',
           queryParams: {
             access_type: 'offline',
             prompt: 'consent',

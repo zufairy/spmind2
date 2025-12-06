@@ -62,7 +62,7 @@ export const InitialNavigator: React.FC = () => {
           >
             🧠
           </Animatable.Text>
-          <Text style={styles.title}>Genius</Text>
+          <Text style={styles.title}>SPMind</Text>
           <Text style={styles.subtitle}>AI-Powered Learning</Text>
         </Animatable.View>
         

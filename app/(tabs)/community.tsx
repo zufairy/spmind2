@@ -264,7 +264,7 @@ export default function CommunityScreen() {
     }
   };
 
-  const handleGetGenius = () => {
+  const handleGetSPMind = () => {
     setShowLockedPopup(false);
     router.push('/subscriptions');
   };
@@ -742,7 +742,7 @@ export default function CommunityScreen() {
       <LockedFeaturePopup
         visible={showLockedPopup}
         onClose={() => setShowLockedPopup(false)}
-        onGetGenius={handleGetGenius}
+        onGetSPMind={handleGetSPMind}
         featureName={lockedFeatureName}
       />
     </Animated.View>

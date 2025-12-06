@@ -153,7 +153,7 @@ export default function SubscriptionsScreen() {
         <Animatable.View animation="fadeInUp" delay={200} style={styles.heroSection}>
           <Text style={[styles.heroTitle, dynamicStyles.headerTitle]}>Choose Your Plan</Text>
           <Text style={[styles.heroSubtitle, dynamicStyles.planDescription]}>
-            Unlock the full potential of AI-powered learning with Genius Plus
+            Unlock the full potential of AI-powered learning with SPMind Plus
           </Text>
         </Animatable.View>
 
@@ -224,7 +224,7 @@ export default function SubscriptionsScreen() {
 
         {/* Benefits Section */}
         <Animatable.View animation="fadeInUp" delay={600} style={styles.benefitsSection}>
-          <Text style={[styles.sectionTitle, dynamicStyles.sectionTitle]}>Why Choose Genius Plus?</Text>
+          <Text style={[styles.sectionTitle, dynamicStyles.sectionTitle]}>Why Choose SPMind Plus?</Text>
           
           <View style={styles.benefitsGrid}>
             <Animatable.View animation="fadeInLeft" delay={700} style={styles.benefitItem}>

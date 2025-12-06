@@ -96,7 +96,7 @@ export default function RegisterScreen() {
 
           {/* Logo and Welcome */}
           <View style={styles.logoContainer}>
-            <Text style={styles.logoText}>Genius</Text>
+            <Text style={styles.logoText}>SPMind</Text>
             <Text style={styles.welcomeText}>Let's get you started!</Text>
             <Text style={styles.subtitleText}>
               We'll collect more details in the next step

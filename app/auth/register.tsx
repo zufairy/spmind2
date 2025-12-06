@@ -564,7 +564,7 @@ export default function RegisterScreen() {
               }
             ]}
           >
-            <Text style={styles.welcomeTitle}>Become a Genius</Text>
+            <Text style={styles.welcomeTitle}>Become a SPMind</Text>
             <Text style={styles.welcomeSubtitle}>
               {step === 1 ? 'Start your learning journey today' : 'Complete your profile'}
             </Text>
@@ -830,7 +830,7 @@ export default function RegisterScreen() {
             <Text style={styles.successEmoji}>🎉</Text>
             <Text style={styles.successTitle}>Congratulations!</Text>
             <Text style={styles.successMessage}>
-              Welcome to Genius!{'\n'}
+              Welcome to SPMind!{'\n'}
               Your account has been created successfully.
             </Text>
             <View style={styles.successBadge}>

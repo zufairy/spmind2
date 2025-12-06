@@ -697,7 +697,7 @@ export default function SolverScreen() {
       }
 
       // Create teacher-like KSSR-aligned prompt
-      const teacherPrompt = `You are Cikgu Genius (Teacher Genius), a warm, friendly, and encouraging Malaysian teacher. You're chatting with a primary or secondary school student.
+      const teacherPrompt = `You are Cikgu SPMind (Teacher SPMind), a warm, friendly, and encouraging Malaysian teacher. You're chatting with a primary or secondary school student.
 
 IMPORTANT GUIDELINES:
 1. **Teaching Style**: Be like a caring teacher, not an AI. Use "Cikgu" (Teacher) voice - friendly, patient, encouraging.
@@ -714,7 +714,7 @@ IMPORTANT GUIDELINES:
 
 Student's question: ${correctedText}
 
-Respond as Cikgu Genius - warm, helpful, and naturally Malaysian!`;
+Respond as Cikgu SPMind - warm, helpful, and naturally Malaysian!`;
       
       console.log('Teacher prompt created');
 
@@ -1105,7 +1105,7 @@ Respond as Cikgu Genius - warm, helpful, and naturally Malaysian!`;
               showsVerticalScrollIndicator={false}
               onContentSizeChange={() => chatRef.current?.scrollToEnd({ animated: true })}
             >
-              {/* Genius Welcome Interface */}
+              {/* SPMind Welcome Interface */}
               {chatMessages.length === 0 && (
                 <View style={styles.ciciWelcomeContainer}>
                   <TouchableOpacity 
@@ -1121,7 +1121,7 @@ Respond as Cikgu Genius - warm, helpful, and naturally Malaysian!`;
                       resizeMode="contain"
                     />
                   </TouchableOpacity>
-                  <Text style={styles.ciciGreeting}>Hi I'm Cikgu Genius</Text>
+                  <Text style={styles.ciciGreeting}>Hi I'm Cikgu SPMind</Text>
                   <Text style={styles.ciciQuote}>Your friendly Malaysian teacher. Ask me anything!</Text>
                   
                   <View style={styles.presetButtonsContainer}>
@@ -1227,7 +1227,7 @@ Respond as Cikgu Genius - warm, helpful, and naturally Malaysian!`;
                 >
                   <View style={[styles.messageBubble, styles.aiBubble]}>
                     <Text style={[styles.messageText, dynamicStyles.messageText, styles.aiMessageText]}>
-                      Cikgu Genius is typing...
+                      Cikgu SPMind is typing...
                     </Text>
                   </View>
                 </Animatable.View>

@@ -786,7 +786,7 @@ export default function OnboardingScreen() {
         'weak_subjects': 'Terima kasih! Sekarang, mari kita bincang tentang subjek. Subjek mana yang anda rasa mencabar atau ingin tingkatkan?',
         'strong_subjects': 'Dan sebaliknya, subjek mana yang anda yakin atau paling gemar?',
         'study_minutes_per_day': 'Berapa minit anda biasanya suka belajar sehari?',
-        'academic_goals': 'Akhirnya, apakah matlamat akademik utama anda atau apa yang anda harapkan untuk capai dengan Genius?',
+        'academic_goals': 'Akhirnya, apakah matlamat akademik utama anda atau apa yang anda harapkan untuk capai dengan SPMind?',
       };
       return malayQuestions[step.id] || step.question;
     }
@@ -1521,8 +1521,8 @@ export default function OnboardingScreen() {
                   <View style={styles.welcomeTextContainerWhite}>
                     <Text style={styles.selectionTitleVibrant}>
                       {selectedLanguage === 'Bahasa Melayu' 
-                        ? 'Selamat datang ke Genius!' 
-                        : 'Welcome to Genius!'}
+                        ? 'Selamat datang ke SPMind!' 
+                        : 'Welcome to SPMind!'}
                     </Text>
                     <Text style={styles.selectionSubtitleVibrant}>
                       {selectedLanguage === 'Bahasa Melayu'

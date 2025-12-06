@@ -125,7 +125,7 @@ export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
   global: {
     fetch: customFetch,
     headers: {
-      'X-Client-Info': 'geniusapp-mobile',
+      'X-Client-Info': 'spmindapp-mobile',
     },
   },
   db: {

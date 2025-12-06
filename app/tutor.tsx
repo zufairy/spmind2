@@ -136,7 +136,7 @@ export default function TutorScreen() {
         showsVerticalScrollIndicator={false}
         onContentSizeChange={() => chatRef.current?.scrollToEnd({ animated: true })}
       >
-        {/* Genius Welcome Interface */}
+        {/* SPMind Welcome Interface */}
         {chatMessages.length === 0 && (
           <View style={styles.welcomeContainer}>
             <Image 
@@ -144,7 +144,7 @@ export default function TutorScreen() {
               style={styles.hiImage}
               resizeMode="contain"
             />
-            <Text style={styles.greeting}>Hi I'm Genius</Text>
+            <Text style={styles.greeting}>Hi I'm SPMind</Text>
             <Text style={styles.quote}>Ask anything, I have all the answers.</Text>
             
             <View style={styles.presetButtonsContainer}>

@@ -82,13 +82,13 @@ export default function PaymentScreen() {
       
       const billData = {
         collection_id: collectionId,
-        email: 'user@genius.com', // Default email
+        email: 'user@spmind.com', // Default email
         mobile: '60123456789', // Default mobile
-        name: 'Genius User', // Default name
+        name: 'SPMind User', // Default name
         amount: parseInt(price.replace('RM', '')) * 100, // Convert to cents
-        description: `Genius Plus - ${plan}`,
-        callback_url: 'https://genius-app.com/callback', // Your callback URL
-        redirect_url: 'https://genius-app.com/success', // Your redirect URL
+        description: `SPMind Plus - ${plan}`,
+        callback_url: 'https://spmind-app.com/callback', // Your callback URL
+        redirect_url: 'https://spmind-app.com/success', // Your redirect URL
         due_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(), // 24 hours from now
         // Add payment method if selected
         ...(paymentMethod === 'fpx' && selectedBank && { bank_code: selectedBank }),

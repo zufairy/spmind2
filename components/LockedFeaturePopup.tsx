@@ -16,14 +16,14 @@ const { width } = Dimensions.get('window');
 interface LockedFeaturePopupProps {
   visible: boolean;
   onClose: () => void;
-  onGetGenius: () => void;
+  onGetSPMind: () => void;
   featureName?: string;
 }
 
 export default function LockedFeaturePopup({
   visible,
   onClose,
-  onGetGenius,
+  onGetSPMind,
   featureName = 'This Feature',
 }: LockedFeaturePopupProps) {
   return (
@@ -114,7 +114,7 @@ export default function LockedFeaturePopup({
             delay={400}
             style={styles.description}
           >
-            {featureName} is exclusive to Genius+ members!
+            {featureName} is exclusive to SPMind+ members!
           </Animatable.Text>
 
           {/* Benefits List */}
@@ -137,25 +137,25 @@ export default function LockedFeaturePopup({
             </View>
           </Animatable.View>
 
-          {/* Get Genius+ Button */}
+          {/* Get SPMind+ Button */}
           <Animatable.View
             animation="fadeInUp"
             delay={800}
             style={styles.buttonContainer}
           >
             <TouchableOpacity
-              style={styles.geniusButton}
-              onPress={onGetGenius}
+              style={styles.spmindButton}
+              onPress={onGetSPMind}
               activeOpacity={0.8}
             >
               <LinearGradient
                 colors={['#FFD700', '#FFA500', '#FF8C00']}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 1 }}
-                style={styles.geniusButtonGradient}
+                style={styles.spmindButtonGradient}
               >
                 <Crown size={20} color="#FFFFFF" />
-                <Text style={styles.geniusButtonText}>Get Genius+</Text>
+                <Text style={styles.spmindButtonText}>Get SPMind+</Text>
                 <Animatable.View
                   animation="pulse"
                   iterationCount="infinite"
@@ -280,7 +280,7 @@ const styles = StyleSheet.create({
     width: '100%',
     gap: 12,
   },
-  geniusButton: {
+  spmindButton: {
     width: '100%',
     borderRadius: 16,
     overflow: 'hidden',
@@ -290,14 +290,14 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 6,
   },
-  geniusButtonGradient: {
+  spmindButtonGradient: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: 16,
     gap: 8,
   },
-  geniusButtonText: {
+  spmindButtonText: {
     fontSize: 18,
     fontFamily: 'SpaceGrotesk-Bold',
     fontWeight: '700',

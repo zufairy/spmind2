@@ -614,7 +614,7 @@ export default function ProfileScreen() {
         router.push('/subscriptions');
         break;
       case 'About Us':
-        Alert.alert('About Us', 'Genius - Your AI-powered learning companion\n\nVersion 1.0.0\n\n© 2024 Genius. All rights reserved.');
+        Alert.alert('About Us', 'SPMind - Your AI-powered learning companion\n\nVersion 1.0.0\n\n© 2024 SPMind. All rights reserved.');
         break;
       case 'Brain Boost History':
         // Navigate to brain boost history
@@ -912,7 +912,7 @@ export default function ProfileScreen() {
                     <Crown size={24} color="#FFFFFF" />
                   </View>
                   <View>
-                    <Text style={[styles.premiumTitle, dynamicStyles.premiumTitle]}>Upgrade to Genius+</Text>
+                    <Text style={[styles.premiumTitle, dynamicStyles.premiumTitle]}>Upgrade to SPMind+</Text>
                     <Text style={[styles.premiumSubtitle, dynamicStyles.premiumSubtitle]}>Unlock unlimited AI features</Text>
                   </View>
                 </View>
@@ -1359,7 +1359,7 @@ export default function ProfileScreen() {
         <View style={styles.modalOverlay}>
           <View style={[styles.premiumModal, dynamicStyles.settingsModal]}>
             <View style={[styles.modalHeader, dynamicStyles.modalHeader]}>
-              <Text style={[styles.modalTitle, dynamicStyles.modalTitle]}>Genius Plus</Text>
+              <Text style={[styles.modalTitle, dynamicStyles.modalTitle]}>SPMind Plus</Text>
               <TouchableOpacity 
                 style={styles.closeButton}
                 onPress={() => setPremiumVisible(false)}
