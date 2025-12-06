@@ -123,14 +123,43 @@ class AIProcessingService {
       });
 
       console.log('🎉 All AI processing completed successfully!');
-      return {
-        transcript,
-        summary,
-        stickyNotes
+      
+      // Ensure we always return valid data
+      const result = {
+        transcript: transcript || 'Recording completed. Transcription unavailable.',
+        summary: summary || 'Recording session completed successfully.',
+        stickyNotes: stickyNotes && stickyNotes.length > 0 ? stickyNotes : [{
+          title: 'Recording Complete',
+          content: 'Your recording has been saved successfully.',
+          type: 'important' as const,
+          color: 'yellow' as const,
+          priority: 'medium' as const
+        }]
       };
+      
+      console.log('📊 Final AI results:', {
+        transcriptLength: result.transcript.length,
+        summaryLength: result.summary.length,
+        stickyNotesCount: result.stickyNotes.length
+      });
+      
+      return result;
     } catch (error) {
       console.error('❌ Error in AI processing service:', error);
-      throw error;
+      
+      // Return fallback data instead of throwing - this ensures session can still be created
+      console.log('🔄 Returning fallback data due to AI processing error');
+      return {
+        transcript: 'Audio recording completed. AI processing encountered an error.',
+        summary: 'Recording session saved. Some AI features may be unavailable.',
+        stickyNotes: [{
+          title: 'Recording Saved',
+          content: 'Your recording has been saved successfully. AI processing encountered an error.',
+          type: 'important' as const,
+          color: 'yellow' as const,
+          priority: 'medium' as const
+        }]
+      };
     }
   }
 

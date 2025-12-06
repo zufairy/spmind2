@@ -725,9 +725,7 @@ export default function HomeScreen() {
                     />
                   </Animated.View>
                   <Text style={styles.horizontalStreakNumber}>{currentStreak}</Text>
-                  {currentStreak > 0 && (
-                    <Text style={styles.keepUpText}>Keep up!</Text>
-                  )}
+                  <Text style={styles.keepUpText}>KEEP UP</Text>
                 </View>
               </View>
               <View style={styles.horizontalStreakRightSection}>
@@ -1821,11 +1819,16 @@ const styles = StyleSheet.create({
     backgroundColor: '#D66B2A',
     paddingBottom: 4,
     paddingRight: 4,
+    shadowColor: '#8B4513',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
   },
   dailyBoostButton: {
     height: 120,
     borderRadius: 18,
-    overflow: 'visible',
+    overflow: 'hidden',
     position: 'relative',
     backgroundColor: '#FF8C42',
     borderWidth: 0,
@@ -1863,8 +1866,8 @@ const styles = StyleSheet.create({
   },
   dailyBoostImageContainer: {
     position: 'absolute',
-    right: -4,
-    bottom: -4,
+    right: 0,
+    bottom: 0,
     width: 160,
     height: 160,
     zIndex: 1,
@@ -1897,7 +1900,8 @@ const styles = StyleSheet.create({
     zIndex: 99999,
   },
   horizontalStreakGradient: {
-    padding: 20,
+    padding: 16,
+    paddingTop: 12,
     borderRadius: 20,
     backgroundColor: '#FF6B35',
     borderBottomWidth: 4,
@@ -1918,7 +1922,7 @@ const styles = StyleSheet.create({
   horizontalStreakContent: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 16,
+    gap: 0,
   },
   horizontalStreakLeftSection: {
     alignItems: 'center',
@@ -1926,12 +1930,12 @@ const styles = StyleSheet.create({
   },
   horizontalFlameIconContainer: {
     width: 70,
-    minHeight: 80,
+    minHeight: 70,
     borderRadius: 16,
     backgroundColor: '#FFFFFF',
     alignItems: 'center',
     justifyContent: 'flex-start',
-    paddingTop: 6,
+    paddingTop: 4,
     paddingBottom: 6,
     borderWidth: 0,
     shadowColor: '#000000',
@@ -1944,21 +1948,21 @@ const styles = StyleSheet.create({
   horizontalFlameIcon: {
     width: 40,
     height: 40,
-    marginBottom: 4,
+    marginBottom: 2,
   },
   horizontalStreakNumber: {
     fontSize: 16,
     fontWeight: '700',
     fontFamily: 'Inter-Bold',
     color: '#FF6B35',
-    marginBottom: 2,
+    marginBottom: 0,
   },
   keepUpText: {
     fontSize: 11,
     fontWeight: '600',
     fontFamily: 'Fredoka-SemiBold',
     color: '#000000',
-    marginTop: 2,
+    marginTop: -10,
     textAlign: 'center',
   },
   horizontalStreakRightSection: {

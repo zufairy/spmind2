@@ -1056,10 +1056,6 @@ Respond as Cikgu SPMind - warm, helpful, and naturally Malaysian!`;
         mode="picture"
       />
 
-      {/* Top Controls - now empty, switch and history moved to header */}
-      <View style={styles.topControls}>
-        {/* Empty - controls moved to header */}
-      </View>
 
       {/* Camera Subject Overlay */}
       {activeTab === 'image' && (
@@ -1083,13 +1079,13 @@ Respond as Cikgu SPMind - warm, helpful, and naturally Malaysian!`;
       {activeTab === 'chat' && (
         <Animated.View style={[styles.chatInterface, dynamicStyles.chatInterface, chatContainerStyle]}>
           <LinearGradient
-            colors={['#FFEBEE', '#FFCDD2', '#FFE0E6', '#FFFFFF']}
+            colors={['#FFF3E0', '#FFE0B2', '#FFCC80', '#FFFFFF']}
             style={styles.chatGradientBackground}
           >
             {/* Chat Header removed */}
 
             <KeyboardAvoidingView 
-              style={[styles.chatKeyboardAvoid, { paddingTop: 60 }]} 
+              style={styles.chatKeyboardAvoid} 
               behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
               keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
             >
@@ -1123,7 +1119,7 @@ Respond as Cikgu SPMind - warm, helpful, and naturally Malaysian!`;
                     activeOpacity={0.8}
                   >
                     <Image 
-                      source={require('../../assets/images/hi.png')} 
+                      source={require('../../assets/images/latest.png')} 
                       style={styles.hiImage}
                       resizeMode="contain"
                     />
@@ -1313,9 +1309,9 @@ const styles = StyleSheet.create({
   },
   header: {
     position: 'relative',
-    overflow: 'hidden',
     zIndex: 100,
     backgroundColor: '#000000',
+    elevation: 100,
   },
   headerContent: {
     flexDirection: 'row',
@@ -1323,10 +1319,11 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 20,
     paddingTop: 50,
-    paddingBottom: 20,
+    paddingBottom: 12,
     position: 'relative',
     zIndex: 200,
     pointerEvents: 'box-none',
+    minHeight: 60,
   },
   headerLeft: {
     width: 80,
@@ -1342,7 +1339,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 10,
-    paddingLeft: 40,
   },
   headerLogo: {
     fontSize: 24,
@@ -1684,12 +1680,15 @@ const styles = StyleSheet.create({
     width: '100%',
     maxWidth: 320,
     marginTop: 0,
+    alignItems: 'center',
   },
   presetButtonsRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    justifyContent: 'center',
+    alignItems: 'center',
     marginBottom: 8,
     gap: 8,
+    width: '100%',
   },
   presetButton: {
     backgroundColor: 'rgba(255, 255, 255, 0.8)',
@@ -1714,10 +1713,12 @@ const styles = StyleSheet.create({
   },
   presetButtonText: {
     color: '#333333',
-    fontSize: 12,
-    fontWeight: '500',
-    fontFamily: 'Inter-Medium',
+    fontSize: 13,
+    fontWeight: '400',
+    fontFamily: Platform.OS === 'ios' ? 'Bradley Hand' : 'cursive',
     textAlign: 'center',
+    letterSpacing: 0.3,
+    fontStyle: 'italic',
   },
   chatHeader: {
     flexDirection: 'row',

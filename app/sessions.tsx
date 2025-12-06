@@ -8,6 +8,7 @@ import {
   Dimensions,
   StatusBar,
   Alert,
+  Image,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { ArrowLeft, Calendar, Clock, Users, FileText, MoreVertical, Trash2, Play } from 'lucide-react-native';
@@ -16,6 +17,7 @@ import * as Animatable from 'react-native-animatable';
 import { recordingServiceSupabase } from '../services/recordingServiceSupabase';
 import { RecordingSession, supabase } from '../services/supabase';
 import { authService } from '../services/authService';
+import { useTheme } from '../contexts/ThemeContext';
 
 const { width, height } = Dimensions.get('window');
 
@@ -25,6 +27,7 @@ interface SessionWithNotes extends RecordingSession {
 }
 
 export default function SessionsPage() {
+  const { isDark } = useTheme();
   const [sessions, setSessions] = useState<SessionWithNotes[]>([]);
   const [loading, setLoading] = useState(true);
   const [deletingSessionId, setDeletingSessionId] = useState<string | null>(null);
@@ -149,27 +152,36 @@ export default function SessionsPage() {
 
   if (loading) {
     return (
-      <View style={styles.container}>
-        <StatusBar barStyle="light-content" backgroundColor="#000000" />
-        <LinearGradient
-          colors={['#000000', '#1a1a1a', '#000000']}
-          style={styles.gradient}
-        >
-          <View style={styles.loadingContainer}>
-            <Text style={styles.loadingText}>Loading sessions...</Text>
+      <View style={[styles.container, !isDark && styles.containerLight]}>
+        <StatusBar barStyle={isDark ? "light-content" : "dark-content"} backgroundColor={isDark ? "#000000" : "#FFFFFF"} />
+        {isDark ? (
+          <LinearGradient
+            colors={['#000000', '#1a1a1a', '#000000']}
+            style={styles.gradient}
+          >
+            <View style={styles.loadingContainer}>
+              <Text style={styles.loadingText}>Loading sessions...</Text>
+            </View>
+          </LinearGradient>
+        ) : (
+          <View style={[styles.gradient, styles.gradientLight]}>
+            <View style={styles.loadingContainer}>
+              <Text style={[styles.loadingText, styles.loadingTextLight]}>Loading sessions...</Text>
+            </View>
           </View>
-        </LinearGradient>
+        )}
       </View>
     );
   }
 
   return (
-    <View style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor="#000000" />
-      <LinearGradient
-        colors={['#000000', '#1a1a1a', '#000000']}
-        style={styles.gradient}
-      >
+    <View style={[styles.container, !isDark && styles.containerLight]}>
+      <StatusBar barStyle={isDark ? "light-content" : "dark-content"} backgroundColor={isDark ? "#000000" : "#FFFFFF"} />
+      {isDark ? (
+        <LinearGradient
+          colors={['#000000', '#1a1a1a', '#000000']}
+          style={styles.gradient}
+        >
         {/* Header */}
         <View style={styles.header}>
           <TouchableOpacity 
@@ -212,7 +224,11 @@ export default function SessionsPage() {
         >
           {sessions.length === 0 ? (
             <Animatable.View animation="fadeInUp" delay={200} style={styles.emptyContainer}>
-              <Calendar size={48} color="#666666" />
+              <Image 
+                source={require('../assets/cryv2.png')} 
+                style={styles.emptyIcon}
+                resizeMode="contain"
+              />
               <Text style={styles.emptyTitle}>No Sessions Yet</Text>
               <Text style={styles.emptySubtitle}>
                 Start recording to see your study sessions here
@@ -297,7 +313,143 @@ export default function SessionsPage() {
             ))
           )}
         </ScrollView>
-      </LinearGradient>
+        </LinearGradient>
+      ) : (
+        <View style={[styles.gradient, styles.gradientLight]}>
+          {/* Header */}
+          <View style={styles.header}>
+            <TouchableOpacity 
+              style={[styles.backButton, styles.backButtonLight]} 
+              onPress={() => router.back()}
+            >
+              <ArrowLeft size={24} color={isDark ? "#FFFFFF" : "#000000"} />
+            </TouchableOpacity>
+            <Text style={[styles.headerTitle, styles.headerTitleLight]}>Study Sessions</Text>
+            <View style={styles.headerSpacer} />
+          </View>
+
+          {/* Stats Bar */}
+          <Animatable.View animation="fadeInDown" delay={100} style={[styles.statsContainer, styles.statsContainerLight]}>
+            <View style={styles.statItem}>
+              <Text style={[styles.statNumber, styles.statNumberLight]}>{sessions.length}</Text>
+              <Text style={[styles.statLabel, styles.statLabelLight]}>Total Sessions</Text>
+            </View>
+            <View style={[styles.statDivider, styles.statDividerLight]} />
+            <View style={styles.statItem}>
+              <Text style={[styles.statNumber, styles.statNumberLight]}>
+                {sessions.reduce((total, session) => total + session.notesCount, 0)}
+              </Text>
+              <Text style={[styles.statLabel, styles.statLabelLight]}>Notes Generated</Text>
+            </View>
+            <View style={[styles.statDivider, styles.statDividerLight]} />
+            <View style={styles.statItem}>
+              <Text style={[styles.statNumber, styles.statNumberLight]}>
+                {Math.round(sessions.reduce((total, session) => total + session.duration, 0) / 1000 / 60)}
+              </Text>
+              <Text style={[styles.statLabel, styles.statLabelLight]}>Minutes Recorded</Text>
+            </View>
+          </Animatable.View>
+
+          {/* Sessions List */}
+          <ScrollView 
+            style={styles.scrollContainer}
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={styles.scrollContent}
+          >
+            {sessions.length === 0 ? (
+              <Animatable.View animation="fadeInUp" delay={200} style={styles.emptyContainer}>
+                <Image 
+                  source={require('../assets/cryv2.png')} 
+                  style={styles.emptyIcon}
+                  resizeMode="contain"
+                />
+                <Text style={[styles.emptyTitle, styles.emptyTitleLight]}>No Sessions Yet</Text>
+                <Text style={[styles.emptySubtitle, styles.emptySubtitleLight]}>
+                  Start recording to see your study sessions here
+                </Text>
+              </Animatable.View>
+            ) : (
+              sessions.map((session, index) => (
+                <Animatable.View
+                  key={session.id}
+                  animation="fadeInUp"
+                  delay={200 + index * 100}
+                  style={[styles.sessionCard, styles.sessionCardLight]}
+                >
+                  <TouchableOpacity
+                    style={styles.sessionContent}
+                    onPress={() => handleSessionPress(session)}
+                    activeOpacity={0.7}
+                  >
+                    {/* Session Header */}
+                    <View style={styles.sessionHeader}>
+                      <View style={styles.sessionTitleContainer}>
+                        <Text style={[styles.sessionTitle, styles.sessionTitleLight]}>{session.title}</Text>
+                        <Text style={[styles.sessionDate, styles.sessionDateLight]}>{formatDate(session.created_at)}</Text>
+                      </View>
+                      <TouchableOpacity
+                        style={[
+                          styles.sessionActionButton,
+                          styles.sessionActionButtonLight,
+                          deletingSessionId === session.id && styles.sessionActionButtonLoading
+                        ]}
+                        onPress={(e) => {
+                          e.stopPropagation();
+                          handleDeleteSession(session.id);
+                        }}
+                        disabled={deletingSessionId === session.id}
+                      >
+                        {deletingSessionId === session.id ? (
+                          <Text style={styles.loadingSpinner}>⏳</Text>
+                        ) : (
+                          <Trash2 size={16} color="#FF6B9D" />
+                        )}
+                      </TouchableOpacity>
+                    </View>
+
+                    {/* Session Summary */}
+                    {session.summary && (
+                      <Text style={[styles.sessionSummary, styles.sessionSummaryLight]}>
+                        {truncateText(session.summary, 120)}
+                      </Text>
+                    )}
+
+                    {/* Session Stats */}
+                    <View style={styles.sessionStats}>
+                      <View style={[styles.statBadge, styles.statBadgeLight]}>
+                        <Clock size={14} color="#8B5CF6" />
+                        <Text style={[styles.statBadgeText, styles.statBadgeTextLight]}>{formatDuration(session.duration)}</Text>
+                      </View>
+                      <View style={[styles.statBadge, styles.statBadgeLight]}>
+                        <FileText size={14} color="#10B981" />
+                        <Text style={[styles.statBadgeText, styles.statBadgeTextLight]}>{session.notesCount} notes</Text>
+                      </View>
+                      <View style={[styles.statBadge, styles.statBadgeLight]}>
+                        <Users size={14} color="#F59E0B" />
+                        <Text style={[styles.statBadgeText, styles.statBadgeTextLight]}>{session.attendees?.length || 1} attendee</Text>
+                      </View>
+                    </View>
+
+                    {/* Session Footer */}
+                    <View style={styles.sessionFooter}>
+                      <View style={styles.sessionTags}>
+                        {session.subjects?.map((subject, idx) => (
+                          <View key={idx} style={styles.subjectTag}>
+                            <Text style={styles.subjectTagText}>{subject}</Text>
+                          </View>
+                        ))}
+                      </View>
+                      <View style={styles.playButton}>
+                        <Play size={16} color="#8B5CF6" />
+                      </View>
+                    </View>
+                  </TouchableOpacity>
+                </Animatable.View>
+              ))
+            )}
+          </ScrollView>
+        </View>
+      )}
     </View>
   );
 }
@@ -330,7 +482,7 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     fontSize: 24,
-    fontFamily: 'SpaceGrotesk-Bold',
+    fontFamily: 'Fredoka-SemiBold',
     color: '#FFFFFF',
   },
   headerSpacer: {
@@ -508,6 +660,70 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontFamily: 'Inter-Medium',
     color: 'rgba(255, 255, 255, 0.8)',
+  },
+  emptyIcon: {
+    width: 192,
+    height: 192,
+  },
+  // Light mode styles
+  containerLight: {
+    backgroundColor: '#FFFFFF',
+  },
+  gradientLight: {
+    backgroundColor: '#FFFFFF',
+  },
+  backButtonLight: {
+    backgroundColor: 'rgba(0, 0, 0, 0.1)',
+    borderColor: 'rgba(0, 0, 0, 0.2)',
+  },
+  headerTitleLight: {
+    color: '#000000',
+  },
+  statsContainerLight: {
+    backgroundColor: 'rgba(0, 0, 0, 0.05)',
+    borderColor: 'rgba(0, 0, 0, 0.1)',
+  },
+  statNumberLight: {
+    color: '#000000',
+  },
+  statLabelLight: {
+    color: 'rgba(0, 0, 0, 0.7)',
+  },
+  statDividerLight: {
+    backgroundColor: 'rgba(0, 0, 0, 0.1)',
+  },
+  sessionCardLight: {
+    backgroundColor: 'rgba(0, 0, 0, 0.03)',
+    borderColor: 'rgba(0, 0, 0, 0.08)',
+  },
+  sessionTitleLight: {
+    color: '#000000',
+  },
+  sessionDateLight: {
+    color: 'rgba(0, 0, 0, 0.6)',
+  },
+  sessionActionButtonLight: {
+    backgroundColor: 'rgba(255, 107, 157, 0.1)',
+    borderColor: 'rgba(255, 107, 157, 0.3)',
+  },
+  sessionSummaryLight: {
+    color: 'rgba(0, 0, 0, 0.8)',
+  },
+  statBadgeLight: {
+    backgroundColor: 'rgba(0, 0, 0, 0.05)',
+    borderColor: 'rgba(0, 0, 0, 0.1)',
+  },
+  statBadgeTextLight: {
+    color: 'rgba(0, 0, 0, 0.9)',
+  },
+  emptyTitleLight: {
+    color: '#000000',
+  },
+  emptySubtitleLight: {
+    color: 'rgba(0, 0, 0, 0.6)',
+  },
+  loadingTextLight: {
+    color: 'rgba(0, 0, 0, 0.8)',
   },
 });
 
