@@ -78,6 +78,164 @@ export default function RecordingResultScreen() {
     }
   }, [sessionId]);
 
+  // Generate sticky notes from transcript (independent of page loading)
+  const generateStickyNotesFromTranscript = async (
+    sessionId: string, 
+    transcript: string, 
+    userId: string
+  ) => {
+    try {
+      console.log('🔄 Generating sticky notes from transcript for session:', sessionId);
+      console.log('🔄 Transcript length:', transcript.length);
+      
+      // Get auth user ID to match RLS policy
+      const { data: { user: authUser }, error: authError } = await supabase.auth.getUser();
+      if (authError || !authUser) {
+        console.error('❌ Not authenticated for sticky note generation');
+        return;
+      }
+      
+      const authUserId = authUser.id;
+      
+      // Create the prompt for sticky notes generation
+      const stickyNotesPrompt = `Extract ONLY important educational content from this transcript to create study-focused sticky notes.
+
+CRITICAL RULES - NO MOCK DATA:
+- ONLY include: exam dates, historical dates, scientific facts, math formulas, definitions, key terms
+- DO NOT invent or add any content not clearly stated in the transcript
+- If no clear educational points found, return empty array []
+- Each note must be VERY SHORT: maximum 1 sentence, ≤15 words
+- Make notes useful for students under 17 (study reminders, key facts)
+- Focus on concrete, factual information only
+- NO generic concepts or made-up examples
+
+EDUCATIONAL CONTENT TYPES TO EXTRACT:
+- Exam dates and deadlines
+- Historical dates and events
+- Scientific facts and discoveries
+- Math formulas and equations
+- Important definitions
+- Key terms and concepts
+- Study deadlines
+- Assignment due dates
+
+For each sticky note, provide:
+1. Title (3-5 words max, educational focus)
+2. Content (1 sentence max, ≤15 words, only facts from transcript)
+3. Type (choose from: exam, deadline, formula, definition, important, reminder)
+4. Color (yellow, pink, green, blue, purple, orange, red)
+5. Priority (high, medium, low)
+
+Transcript: ${transcript}
+
+Format your response as JSON array (empty [] if no educational content found):
+[
+  {
+    "title": "Short Title",
+    "content": "One sentence fact from transcript",
+    "type": "formula",
+    "color": "yellow",
+    "priority": "high"
+  }
+]`;
+
+      // Generate sticky notes using AI
+      const response = await aiService.sendMessage(
+        [{ role: 'user', content: stickyNotesPrompt }],
+        'en'
+      );
+
+      console.log('🔄 AI Response received:', response.success);
+
+      if (!response.success || !response.message) {
+        console.error('❌ AI response failed');
+        return;
+      }
+
+      // Parse the JSON response
+      try {
+        const stickyNotesData = JSON.parse(response.message);
+        
+        if (Array.isArray(stickyNotesData) && stickyNotesData.length > 0) {
+          console.log(`✅ Generated ${stickyNotesData.length} sticky notes from transcript`);
+          
+          // Validate colors and types
+          const allowedColors = ['yellow', 'pink', 'green', 'blue', 'purple', 'orange', 'red'];
+          const allowedTypes = ['task', 'focus', 'important', 'todo', 'reminder', 'exam', 'deadline', 'formula', 'definition', 'tip'];
+          
+          // Save the new sticky notes directly to session_sticky_notes table
+          for (const noteData of stickyNotesData) {
+            // Validate color
+            let validColor = noteData.color || 'yellow';
+            if (!allowedColors.includes(validColor)) {
+              validColor = 'yellow';
+            }
+            
+            // Validate type
+            let validType = noteData.type || 'important';
+            if (!allowedTypes.includes(validType)) {
+              validType = 'important';
+            }
+            
+            const { data: stickyNote, error: stickyNoteError } = await supabase
+              .from('session_sticky_notes')
+              .insert([
+                {
+                  session_id: sessionId,
+                  user_id: authUserId, // Use auth user ID to match RLS policy
+                  title: noteData.title || 'Key Point',
+                  content: noteData.content || 'Important information',
+                  type: validType,
+                  color: validColor,
+                  priority: noteData.priority || 'medium',
+                  completed: false,
+                  image: null,
+                }
+              ])
+              .select()
+              .single();
+
+            if (stickyNoteError) {
+              console.error('❌ Error creating sticky note:', stickyNoteError);
+              // Continue with other notes even if one fails
+            } else {
+              console.log('✅ Created sticky note:', stickyNote?.title);
+            }
+          }
+          
+          // Reload the sticky notes after generation
+          console.log('🔄 Reloading sticky notes after generation...');
+          const updatedNotes = await recordingServiceSupabase.getSessionStickyNotes(sessionId);
+          if (updatedNotes && updatedNotes.length > 0) {
+            const sessionNotes: SessionStickyNote[] = updatedNotes.map(note => ({
+              id: note.id,
+              session_id: sessionId,
+              user_id: userId,
+              title: note.title,
+              content: note.content || '',
+              type: note.type,
+              color: note.color,
+              priority: note.priority,
+              completed: note.completed || false,
+              image: note.image,
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString(),
+            }));
+            setStickyNotes(sessionNotes);
+            console.log('✅ Updated sticky notes in UI:', sessionNotes.length);
+          }
+        } else {
+          console.log('ℹ️ No educational content found in transcript to create sticky notes');
+        }
+      } catch (parseError) {
+        console.error('❌ Error parsing AI response:', parseError);
+      }
+    } catch (error) {
+      console.error('❌ Error generating sticky notes from transcript:', error);
+      // Don't throw - this is a background operation
+    }
+  };
+
   const loadSessionData = async (retryCount = 0) => {
     try {
       setLoading(true);
@@ -129,6 +287,56 @@ export default function RecordingResultScreen() {
       setSession(sessionData);
       setEditingTitle(sessionData.title || '');
 
+      // Check if summary is missing or empty, regenerate if needed
+      const needsSummary = !sessionData.summary || 
+                           typeof sessionData.summary !== 'string' || 
+                           sessionData.summary.trim().length === 0 ||
+                           sessionData.summary === 'Recording session saved successfully';
+      
+      if (needsSummary && sessionData.transcript && sessionData.transcript.trim().length > 10) {
+        console.log('🔄 Summary missing or empty, regenerating from transcript...');
+        // Generate summary in background
+        (async () => {
+          try {
+            const { aiService } = await import('../services/aiService');
+            const summaryPrompt = `You are an AI assistant that creates concise summaries. 
+
+CRITICAL LANGUAGE RULE:
+- You MUST respond in the EXACT SAME language as the transcript
+- If the transcript is in Malay, you MUST respond in Malay
+- If the transcript is in English, you MUST respond in English
+- If the transcript is mixed language, respond in the same mixed language naturally
+- DO NOT translate or change the language - keep it identical
+
+CONTENT RULES:
+- Write as ONE SHORT PARAGRAPH (maximum 4-5 sentences)
+- Focus on the MAIN TOPIC and OVERALL DISCUSSION
+- Keep it concise and straight to the point
+- NO formatting symbols like ** or __ - just plain text
+- ONLY summarize what was actually said in the transcript
+- Avoid detailed explanations - just give the big picture
+
+Transcript: ${sessionData.transcript}
+
+Overall Summary:`;
+            
+            const response = await aiService.sendMessage(
+              [{ role: 'user', content: summaryPrompt }],
+              'en'
+            );
+            
+            if (response.success && response.message) {
+              const summary = response.message.trim();
+              await recordingServiceSupabase.updateSession(sessionData.id, { summary });
+              setSession(prev => prev ? { ...prev, summary } : null);
+              console.log('✅ Summary regenerated successfully');
+            }
+          } catch (error) {
+            console.error('Error regenerating summary:', error);
+          }
+        })();
+      }
+
       // Load sticky notes for this session with retry
       let notes = await recordingServiceSupabase.getSessionStickyNotes(sessionId as string);
       
@@ -169,13 +377,32 @@ export default function RecordingResultScreen() {
         console.log('🔍 Converted session notes:', sessionNotes);
         setStickyNotes(sessionNotes);
       } else {
-        console.log('🔍 No sticky notes found in database (they may still be generating)');
+        console.log('🔍 No sticky notes found in database - generating from transcript...');
         setStickyNotes([]);
-        // Don't treat this as an error - notes might still be processing
+        
+        // Auto-generate sticky notes from transcript if available
+        if (sessionData?.transcript && sessionData.transcript.trim().length > 10) {
+          console.log('🔄 Auto-generating sticky notes from transcript...');
+          // Generate sticky notes in the background without blocking UI
+          generateStickyNotesFromTranscript(sessionData.id, sessionData.transcript, sessionData.user_id)
+            .catch(error => {
+              console.error('Error auto-generating sticky notes:', error);
+              // Don't show error to user - just log it
+            });
+        }
       }
     } catch (error) {
       console.error('Error loading session data:', error);
       const errorMessage = error instanceof Error ? error.message : 'Failed to load recording session data';
+      
+      // Even if loading fails, try to generate sticky notes if we have session data
+      if (session) {
+        console.log('🔄 Session exists but loading failed, attempting to generate sticky notes from transcript...');
+        if (session.transcript && session.transcript.trim().length > 10) {
+          generateStickyNotesFromTranscript(session.id, session.transcript, session.user_id)
+            .catch(err => console.error('Error generating sticky notes after load error:', err));
+        }
+      }
       
       // Show error but keep loading state active for auto-retry
       Alert.alert(
@@ -261,6 +488,13 @@ export default function RecordingResultScreen() {
 
 
   const handleDeleteStickyNote = async (noteId: string) => {
+    // Validate note ID before proceeding
+    if (!noteId || noteId.trim() === '' || noteId === 'undefined') {
+      console.error('Error: Note ID is undefined, empty, or invalid:', noteId);
+      Alert.alert('Error', 'Cannot delete note: Note ID is missing');
+      return;
+    }
+
     Alert.alert(
       'Delete Sticky Note',
       'Are you sure you want to delete this sticky note? This action cannot be undone.',
@@ -274,6 +508,13 @@ export default function RecordingResultScreen() {
           style: 'destructive',
           onPress: async () => {
             try {
+              // Validate note ID again before deletion
+              if (!noteId || noteId.trim() === '' || noteId === 'undefined') {
+                console.error('Error: Note ID is undefined, empty, or invalid during deletion:', noteId);
+                Alert.alert('Error', 'Cannot delete note: Note ID is missing');
+                return;
+              }
+
               // Delete directly from session_sticky_notes table
               const { error } = await supabase
                 .from('session_sticky_notes')
@@ -598,20 +839,52 @@ Format your response as JSON array (empty [] if no educational content found):
     }
   };
 
-  const formatDuration = (duration: number) => {
+  const formatDuration = (duration: number | null | undefined) => {
+    if (!duration || isNaN(duration) || duration <= 0) {
+      return '0:00';
+    }
     const minutes = Math.floor(duration / 60000);
     const seconds = Math.floor((duration % 60000) / 1000);
     return `${minutes}:${seconds.toString().padStart(2, '0')}`;
   };
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
+  const formatDate = (dateString: string | null | undefined) => {
+    if (!dateString) {
+      return new Date().toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+      });
+    }
+    try {
+      const date = new Date(dateString);
+      if (isNaN(date.getTime())) {
+        return new Date().toLocaleDateString('en-US', {
+          year: 'numeric',
+          month: 'long',
+          day: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit',
+        });
+      }
+      return date.toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+      });
+    } catch (error) {
+      return new Date().toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+      });
+    }
   };
 
   // Audio playback functions
@@ -830,11 +1103,15 @@ Format your response as JSON array (empty [] if no educational content found):
           <Animatable.View animation="fadeInUp" delay={100} style={styles.infoCard}>
             <View style={styles.infoRow}>
               <Clock size={16} color="#667eea" />
-              <Text style={styles.infoText}>Duration: {formatDuration(session.duration)}</Text>
+              <Text style={styles.infoText}>
+                Duration: {formatDuration(session?.duration || 0)}
+              </Text>
             </View>
             <View style={styles.infoRow}>
               <Calendar size={16} color="#667eea" />
-              <Text style={styles.infoText}>{formatDate(session.created_at)}</Text>
+              <Text style={styles.infoText}>
+                {formatDate(session?.created_at || new Date().toISOString())}
+              </Text>
             </View>
           </Animatable.View>
 
@@ -901,11 +1178,13 @@ Format your response as JSON array (empty [] if no educational content found):
                 <Text style={styles.summarySubtitle}>AI understands you said:</Text>
               </View>
               <Text style={styles.summaryText}>
-                {session.summary || 'No summary available yet. Processing...'}
+                {session?.summary && typeof session.summary === 'string' && session.summary.trim() 
+                  ? session.summary 
+                  : 'No summary available yet. Processing...'}
               </Text>
               
               {/* Show chunking info if this was a long recording */}
-              {session.duration > 480000 && ( // 8 minutes in milliseconds
+              {session?.duration && session.duration > 480000 && ( // 8 minutes in milliseconds
                 <View style={styles.chunkingInfoContainer}>
                   <Text style={styles.chunkingInfoIcon}>🔀</Text>
                   <Text style={styles.chunkingInfoText}>

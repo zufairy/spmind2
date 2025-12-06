@@ -1336,9 +1336,10 @@ const styles = StyleSheet.create({
     flex: 1,
     zIndex: 201,
     pointerEvents: 'none',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     justifyContent: 'center',
     paddingHorizontal: 10,
+    paddingLeft: 0,
   },
   headerLogo: {
     fontSize: 24,

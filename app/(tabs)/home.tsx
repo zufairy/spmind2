@@ -498,11 +498,9 @@ export default function HomeScreen() {
   };
 
   const categories = [
+    { id: 'bahasa', label: 'Bahasa Melayu' },
+    { id: 'maths', label: 'Matematik' },
     { id: 'english', label: 'English' },
-    { id: 'bahasa', label: 'Bahasa Malaysia' },
-    { id: 'maths', label: 'Maths' },
-    { id: 'science', label: 'Science' },
-    { id: 'sejarah', label: 'Sejarah' },
   ];
 
   // Function to get the appropriate color style for each category
@@ -792,7 +790,7 @@ export default function HomeScreen() {
               <Image 
                 source={require('../../assets/dailyboost.png')}
                 style={styles.dailyBoostBackground}
-                resizeMode="contain"
+                resizeMode="cover"
               />
             </View>
           </TouchableOpacity>
@@ -812,18 +810,11 @@ export default function HomeScreen() {
 
             {/* Subject Categories Container */}
             <View style={styles.categoriesWrapper}>
-            {/* Top Dashed Line */}
-            <View style={styles.categoriesDashedLineTop}>
-              {Array.from({ length: 20 }).map((_, i) => (
-                <View key={i} style={styles.dash} />
-              ))}
-            </View>
-            
-            {/* 2-Row Subject Grid */}
+            {/* Subject Grid - Duolingo Style */}
             <View style={styles.categoriesGrid}>
-              {/* First Row */}
+              {/* First Row - 2 buttons */}
               <View style={styles.categoriesRow}>
-                {categories.slice(0, 3).map((category) => (
+                {categories.slice(0, 2).map((category) => (
                   <TouchableOpacity
                     key={category.id}
                     style={[
@@ -835,8 +826,6 @@ export default function HomeScreen() {
                   >
                     <Text style={[
                       styles.categoryText,
-                      category.id === 'bahasa' && styles.bahasaText,
-                      category.id === 'english' && styles.englishText,
                       selectedCategory === category.id && styles.selectedCategoryText,
                     ]}>
                       {category.label}
@@ -845,9 +834,9 @@ export default function HomeScreen() {
                 ))}
               </View>
               
-              {/* Second Row */}
+              {/* Second Row - 1 button */}
               <View style={styles.categoriesRow}>
-                {categories.slice(3).map((category) => (
+                {categories.slice(2).map((category) => (
                   <TouchableOpacity
                     key={category.id}
                     style={[
@@ -859,8 +848,6 @@ export default function HomeScreen() {
                   >
                     <Text style={[
                       styles.categoryText,
-                      category.id === 'bahasa' && styles.bahasaText,
-                      category.id === 'english' && styles.englishText,
                       selectedCategory === category.id && styles.selectedCategoryText,
                     ]}>
                       {category.label}
@@ -868,13 +855,6 @@ export default function HomeScreen() {
                   </TouchableOpacity>
                 ))}
               </View>
-            </View>
-            
-            {/* Bottom Dashed Line */}
-            <View style={styles.categoriesDashedLineBottom}>
-              {Array.from({ length: 20 }).map((_, i) => (
-                <View key={i} style={styles.dash} />
-              ))}
             </View>
           </View>
 
@@ -1050,7 +1030,7 @@ const styles = StyleSheet.create({
   fixedCompleteContainer: {
     borderWidth: 1,
     borderColor: '#404040',
-    borderRadius: 6,
+    borderRadius: 16,
     padding: 20,
     backgroundColor: '#1F1F1F',
   },
@@ -1301,101 +1281,76 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     paddingVertical: 12,
   },
-  categoriesDashedLineTop: {
-    flexDirection: 'row',
-    justifyContent: 'space-evenly',
-    alignItems: 'center',
-    marginBottom: 12,
-    width: '100%',
-    paddingHorizontal: 0,
-    overflow: 'hidden',
-  },
-  categoriesDashedLineBottom: {
-    flexDirection: 'row',
-    justifyContent: 'space-evenly',
-    alignItems: 'center',
-    marginTop: 12,
-    width: '100%',
-    paddingHorizontal: 0,
-    overflow: 'hidden',
-  },
   categoriesGrid: {
     paddingHorizontal: 0,
   },
   categoriesRow: {
     flexDirection: 'row',
-    justifyContent: 'center',
+    justifyContent: 'flex-start',
     alignItems: 'center',
     marginBottom: 8,
     gap: 8,
+    paddingHorizontal: 0,
   },
   categoryButton: {
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 8,
-    backgroundColor: 'rgba(255, 255, 255, 0.12)',
-    minHeight: 36,
+    paddingHorizontal: 20,
+    paddingVertical: 14,
+    borderRadius: 12,
+    minHeight: 48,
     justifyContent: 'center',
     alignItems: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.18)',
+    borderWidth: 0,
+    borderBottomWidth: 4,
     shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.06,
-    shadowRadius: 2,
-    elevation: 1,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+    marginHorizontal: 0,
   },
   selectedCategoryButton: {
-    backgroundColor: '#FF6B35',
-    borderColor: '#FF8E53',
-    shadowColor: '#FF6B35',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.2,
     shadowRadius: 6,
-    elevation: 4,
+    elevation: 5,
     transform: [{ scale: 1.02 }],
   },
   categoryText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#000000',
-    textShadowColor: 'rgba(255, 255, 255, 0.3)',
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 1,
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    fontFamily: 'Fredoka-Bold',
+    textAlign: 'center',
+    letterSpacing: 0.5,
+    textTransform: 'uppercase',
   },
   selectedCategoryText: {
     color: '#FFFFFF',
     fontWeight: '700',
-    textShadowColor: 'rgba(0, 0, 0, 0.3)',
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 2,
-  },
-  englishButton: {
-    backgroundColor: '#FFB3B3', // Red pastel
-    borderColor: '#FF9999',
+    fontFamily: 'Fredoka-Bold',
   },
   bahasaButton: {
-    backgroundColor: '#FFDFBA', // Pastel peach
-    borderColor: '#FFCC99',
+    backgroundColor: '#58CC02', // Green from Duolingo
+    borderBottomColor: '#47A302', // Darker green border
+    borderRightWidth: 0,
+    borderLeftWidth: 0,
+    borderTopWidth: 0,
   },
   mathsButton: {
-    backgroundColor: '#FFFFBA', // Pastel yellow
-    borderColor: '#FFFF99',
+    backgroundColor: '#8B5CF6', // Purple from image
+    borderBottomColor: '#7C3AED', // Darker purple border
+    borderRightWidth: 0,
+    borderLeftWidth: 0,
+    borderTopWidth: 0,
   },
-  scienceButton: {
-    backgroundColor: '#BAFFC9', // Pastel green
-    borderColor: '#99FFB3',
+  englishButton: {
+    backgroundColor: '#FFC800', // Gold/yellow from image
+    borderBottomColor: '#E6B400', // Darker gold border
+    borderRightWidth: 0,
+    borderLeftWidth: 0,
+    borderTopWidth: 0,
   },
-  sejarahButton: {
-    backgroundColor: '#BAE1FF', // Pastel blue
-    borderColor: '#99D3FF',
-  },
-  bahasaText: {
-    color: '#000000',
-  },
-      englishText: {
-        color: '#000000', // Black color for English button text
-      },
   cardsContainer: {
     flex: 1,
     paddingHorizontal: 0,
@@ -1871,8 +1826,6 @@ const styles = StyleSheet.create({
     width: 160,
     height: 160,
     zIndex: 1,
-    justifyContent: 'flex-end',
-    alignItems: 'flex-end',
   },
   dailyBoostBackground: {
     width: 160,
