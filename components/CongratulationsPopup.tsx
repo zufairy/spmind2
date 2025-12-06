@@ -22,6 +22,8 @@ const CongratulationsPopup: React.FC<CongratulationsPopupProps> = ({
   const glowAnim = useRef(new Animated.Value(0)).current;
   const textGlowAnim = useRef(new Animated.Value(0)).current;
   const fadeAnim = useRef(new Animated.Value(0)).current;
+  const buttonPulseAnim = useRef(new Animated.Value(1)).current;
+  const buttonGlowAnim = useRef(new Animated.Value(0)).current;
   
   // Confetti animations
   const confettiPieces = useRef(
@@ -94,6 +96,40 @@ const CongratulationsPopup: React.FC<CongratulationsPopupProps> = ({
         useNativeDriver: true,
       }).start();
 
+      // Button pulse animation
+      const buttonPulseAnimation = Animated.loop(
+        Animated.sequence([
+          Animated.timing(buttonPulseAnim, {
+            toValue: 1.05,
+            duration: 1000,
+            useNativeDriver: true,
+          }),
+          Animated.timing(buttonPulseAnim, {
+            toValue: 1,
+            duration: 1000,
+            useNativeDriver: true,
+          }),
+        ])
+      );
+      buttonPulseAnimation.start();
+
+      // Button glow animation
+      const buttonGlowAnimation = Animated.loop(
+        Animated.sequence([
+          Animated.timing(buttonGlowAnim, {
+            toValue: 1,
+            duration: 1500,
+            useNativeDriver: false,
+          }),
+          Animated.timing(buttonGlowAnim, {
+            toValue: 0,
+            duration: 1500,
+            useNativeDriver: false,
+          }),
+        ])
+      );
+      buttonGlowAnimation.start();
+
       // Start confetti animation after a short delay
       confettiTimeout = setTimeout(() => {
         confettiPieces.forEach((piece, index) => {
@@ -132,6 +168,8 @@ const CongratulationsPopup: React.FC<CongratulationsPopupProps> = ({
         glowAnim.stopAnimation();
         textGlowAnim.stopAnimation();
         fadeAnim.stopAnimation();
+        buttonPulseAnim.stopAnimation();
+        buttonGlowAnim.stopAnimation();
         confettiPieces.forEach(piece => {
           piece.translateY.stopAnimation();
           piece.translateX.stopAnimation();
@@ -167,6 +205,21 @@ const CongratulationsPopup: React.FC<CongratulationsPopupProps> = ({
   const textGlowOpacity = textGlowAnim.interpolate({
     inputRange: [0, 1],
     outputRange: [0.5, 1],
+  });
+
+  const purpleGlowOpacity = textGlowAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0.25, 0.5],
+  });
+
+  const purpleSubtitleGlowOpacity = textGlowAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0.15, 0.3],
+  });
+
+  const buttonGlowOpacity = buttonGlowAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0.4, 0.8],
   });
 
   if (!isVisible) return null;
@@ -222,7 +275,7 @@ const CongratulationsPopup: React.FC<CongratulationsPopupProps> = ({
         
         {/* Main gradient background */}
         <LinearGradient
-          colors={['#1a1a1a', '#2d2d2d', '#1a1a1a']}
+          colors={['#FFFFFF', '#F8F7FF', '#FFFFFF']}
           style={styles.gradientBackground}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
@@ -244,13 +297,13 @@ const CongratulationsPopup: React.FC<CongratulationsPopupProps> = ({
               style={[
                 styles.title,
                 {
-                  textShadowColor: `rgba(255, 255, 255, ${textGlowOpacity})`,
+                  textShadowColor: `rgba(124, 58, 237, ${purpleGlowOpacity})`,
                   textShadowOffset: { width: 0, height: 0 },
                   textShadowRadius: 20,
                 },
               ]}
             >
-              Welcome to Genius
+              Welcome to SPMind!
             </Animated.Text>
             
             {/* Subtitle */}
@@ -258,7 +311,7 @@ const CongratulationsPopup: React.FC<CongratulationsPopupProps> = ({
               style={[
                 styles.subtitle,
                 {
-                  textShadowColor: `rgba(255, 255, 255, ${textGlowOpacity})`,
+                  textShadowColor: `rgba(124, 58, 237, ${purpleSubtitleGlowOpacity})`,
                   textShadowOffset: { width: 0, height: 0 },
                   textShadowRadius: 15,
                 },
@@ -269,13 +322,39 @@ const CongratulationsPopup: React.FC<CongratulationsPopupProps> = ({
           </View>
 
           {/* Help with my homework button */}
-          <TouchableOpacity
-            style={styles.continueButton}
-            onPress={handleComplete}
-            activeOpacity={0.8}
+          <Animated.View
+            style={[
+              styles.buttonContainer,
+              {
+                transform: [{ scale: buttonPulseAnim }],
+              },
+            ]}
           >
-            <Text style={styles.continueText}>Help with my homework</Text>
-          </TouchableOpacity>
+            <Animated.View
+              style={[
+                styles.buttonGlow,
+                {
+                  opacity: buttonGlowOpacity,
+                },
+              ]}
+            />
+            <TouchableOpacity
+              style={styles.continueButton}
+              onPress={handleComplete}
+              activeOpacity={0.8}
+            >
+              <LinearGradient
+                colors={['#7C3AED', '#9D6BFF', '#B794F6', '#7C3AED']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.buttonGradient}
+              >
+                <Text style={styles.continueText}>
+                  ✨ Help with my homework ✨
+                </Text>
+              </LinearGradient>
+            </TouchableOpacity>
+          </Animated.View>
         </LinearGradient>
       </Animated.View>
     </Animated.View>
@@ -314,8 +393,8 @@ const styles = StyleSheet.create({
     right: -15,
     bottom: -15,
     borderRadius: 24,
-    backgroundColor: '#000000',
-    shadowColor: '#000000',
+    backgroundColor: '#7C3AED',
+    shadowColor: '#7C3AED',
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 0.6,
     shadowRadius: 25,
@@ -327,7 +406,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     position: 'relative',
     borderWidth: 2,
-    borderColor: 'rgba(255, 255, 255, 0.2)',
+    borderColor: '#E5E7EB',
   },
   innerGlow: {
     position: 'absolute',
@@ -336,7 +415,7 @@ const styles = StyleSheet.create({
     right: 0,
     bottom: 0,
     borderRadius: 16,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    backgroundColor: 'rgba(124, 58, 237, 0.05)',
   },
   content: {
     alignItems: 'center',
@@ -345,7 +424,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 28,
     fontFamily: 'Inter-Bold',
-    color: '#FFFFFF',
+    color: '#7C3AED',
     textAlign: 'center',
     marginBottom: 12,
     letterSpacing: 0.8,
@@ -354,35 +433,61 @@ const styles = StyleSheet.create({
   subtitle: {
     fontSize: 16,
     fontFamily: 'Inter-Medium',
-    color: '#FFF8F0',
+    color: '#1F2937',
     textAlign: 'center',
     marginBottom: 30,
     opacity: 0.9,
     letterSpacing: 0.2,
   },
+  buttonContainer: {
+    marginTop: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: '100%',
+  },
+  buttonGlow: {
+    position: 'absolute',
+    top: -10,
+    left: -10,
+    right: -10,
+    bottom: -10,
+    borderRadius: 26,
+    backgroundColor: '#7C3AED',
+    shadowColor: '#7C3AED',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 1,
+    shadowRadius: 20,
+    elevation: 15,
+  },
   continueButton: {
-    backgroundColor: '#000000',
-    paddingHorizontal: 35,
-    paddingVertical: 16,
-    borderRadius: 12,
-    borderWidth: 2,
-    borderColor: 'rgba(255, 255, 255, 0.2)',
-    marginTop: 15,
-    shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 8,
+    borderRadius: 20,
+    shadowColor: '#7C3AED',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.7,
+    shadowRadius: 20,
+    elevation: 15,
+    overflow: 'hidden',
+    width: '100%',
+    maxWidth: 320,
+  },
+  buttonGradient: {
+    paddingHorizontal: 45,
+    paddingVertical: 20,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 60,
   },
   continueText: {
     color: '#FFFFFF',
     fontFamily: 'Inter-Bold',
-    fontSize: 18,
+    fontSize: 20,
     textAlign: 'center',
-    letterSpacing: 0.5,
-    textShadowColor: 'rgba(0, 0, 0, 0.3)',
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 2,
+    letterSpacing: 1,
+    fontWeight: '800',
+    textShadowColor: 'rgba(0, 0, 0, 0.4)',
+    textShadowOffset: { width: 0, height: 2 },
+    textShadowRadius: 6,
   },
   confettiPiece: {
     position: 'absolute',

@@ -1279,41 +1279,40 @@ export default function OnboardingScreen() {
     const step = onboardingSteps[currentStep];
     switch (step.type) {
       case 'text':
+        const AnimatedTextInput = Animated.createAnimatedComponent(TextInput);
         return (
-          <Animated.View style={{ opacity: inputOpacity, flex: 1 }} pointerEvents="box-none">
-            <TextInput
-              style={styles.input}
-              placeholder={getLocalizedPlaceholder(step, selectedLanguage)}
-              placeholderTextColor="rgba(31, 41, 55, 0.5)"
-              value={userResponse}
-              onChangeText={setUserResponse}
-              autoCapitalize={step.id === 'current_school' ? 'words' : 'sentences'}
-              autoCorrect={true}
-              autoFocus={false}
-              editable={true}
-              returnKeyType="send"
-              onFocus={() => {
-                // Ensure input can receive focus
-              }}
-              onSubmitEditing={() => {
-                const currentStepData = onboardingSteps[currentStep];
-                const hasValidInput = currentStepData.type === 'multiselect' 
-                  ? selectedMultiOptions.length > 0 
-                  : userResponse.trim();
-                
-                if (hasValidInput) {
-                  handleNextStep();
-                }
-              }}
-              blurOnSubmit={false}
-              multiline={false}
-              keyboardType="default"
-              textContentType="none"
-              clearButtonMode="while-editing"
-              importantForAccessibility="yes"
-              accessibilityLabel="Text input"
-            />
-          </Animated.View>
+          <AnimatedTextInput
+            style={[styles.input, { opacity: inputOpacity }]}
+            placeholder={getLocalizedPlaceholder(step, selectedLanguage)}
+            placeholderTextColor="rgba(31, 41, 55, 0.5)"
+            value={userResponse}
+            onChangeText={setUserResponse}
+            autoCapitalize={step.id === 'current_school' ? 'words' : 'sentences'}
+            autoCorrect={true}
+            autoFocus={false}
+            editable={true}
+            returnKeyType="send"
+            onFocus={() => {
+              // Ensure input can receive focus
+            }}
+            onSubmitEditing={() => {
+              const currentStepData = onboardingSteps[currentStep];
+              const hasValidInput = currentStepData.type === 'multiselect' 
+                ? selectedMultiOptions.length > 0 
+                : userResponse.trim();
+              
+              if (hasValidInput) {
+                handleNextStep();
+              }
+            }}
+            blurOnSubmit={false}
+            multiline={false}
+            keyboardType="default"
+            textContentType="none"
+            clearButtonMode="while-editing"
+            importantForAccessibility="yes"
+            accessibilityLabel="Text input"
+          />
         );
       case 'select':
         const localizedOptions = getLocalizedOptions(step, selectedLanguage);
@@ -1708,8 +1707,12 @@ export default function OnboardingScreen() {
                     ]}
                     onPress={handleNextStep}
                     disabled={onboardingSteps[currentStep].type === 'multiselect' && selectedMultiOptions.length === 0}
+                    activeOpacity={0.8}
                   >
-                    <Text style={styles.voiceSubmitButtonText}>
+                    <Text style={[
+                      styles.voiceSubmitButtonText,
+                      (onboardingSteps[currentStep].type === 'multiselect' && selectedMultiOptions.length === 0) && styles.voiceSubmitButtonTextDisabled
+                    ]}>
                       {loading ? 'Saving...' : 'Continue'}
                     </Text>
                   </TouchableOpacity>
@@ -1876,18 +1879,9 @@ export default function OnboardingScreen() {
               </ScrollView>
 
               {/* Minimal Glass Input Area */}
-              <Animatable.View 
-                animation="fadeIn" 
-                duration={200}
-                style={styles.glassInputContainer}
-              >
+              <View style={styles.glassInputContainer}>
                 <View style={styles.glassInputWrapper}>
                   {renderInput()}
-                  <Animatable.View 
-                    animation="fadeIn" 
-                    duration={150}
-                    delay={50}
-                  >
                   <TouchableOpacity 
                     style={styles.glassSendButton}
                     onPress={() => {
@@ -1908,7 +1902,6 @@ export default function OnboardingScreen() {
                         <Send size={16} color="#000000" strokeWidth={2} />
                       )}
                     </TouchableOpacity>
-                  </Animatable.View>
                 </View>
                 
                 {/* Progress Indicator */}
@@ -1920,7 +1913,7 @@ export default function OnboardingScreen() {
                     }
                   </Text>
                 </View>
-              </Animatable.View>
+              </View>
             </KeyboardAvoidingView>
           ) : null}
         </SafeAreaView>
@@ -2884,14 +2877,16 @@ const styles = StyleSheet.create({
   },
   voiceOptionsContainer: {
     paddingHorizontal: 24,
+    paddingBottom: 8,
     alignItems: 'center',
+    width: '100%',
   },
   optionsGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'center',
     gap: 12,
-    marginBottom: 24,
+    marginBottom: 16,
   },
   voiceOptionButton: {
     backgroundColor: '#F3F4F6',
@@ -2928,16 +2923,27 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.5,
     shadowRadius: 12,
     elevation: 10,
+    alignSelf: 'stretch',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 0,
+    borderWidth: 0,
   },
   voiceSubmitButtonDisabled: {
     backgroundColor: '#E5E7EB',
     shadowOpacity: 0,
+    borderWidth: 1,
+    borderColor: '#D1D5DB',
   },
   voiceSubmitButtonText: {
     fontSize: 17,
     fontFamily: 'Inter-Bold',
     fontWeight: '700',
-    color: '#000000',
+    color: '#FFFFFF',
+    textAlign: 'center',
+  },
+  voiceSubmitButtonTextDisabled: {
+    color: '#9CA3AF',
     textAlign: 'center',
   },
   voiceEditButton: {
