@@ -16,10 +16,12 @@ import { router } from 'expo-router';
 import * as Animatable from 'react-native-animatable';
 import { recordingServiceSupabase } from '../../services/recordingServiceSupabase';
 import { ProcessingProgress } from '../../services/aiProcessingService';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const { width, height } = Dimensions.get('window');
 
 export default function RecordPage() {
+  const insets = useSafeAreaInsets();
   const [isRecording, setIsRecording] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
   const [recordingTime, setRecordingTime] = useState(0);
@@ -32,11 +34,12 @@ export default function RecordPage() {
   const [speechError, setSpeechError] = useState<string | null>(null);
   const [language, setLanguage] = useState<'BM' | 'BI'>('BM');
   
-  const timeInterval = useRef<NodeJS.Timeout | null>(null);
-  const transcriptionInterval = useRef<NodeJS.Timeout | null>(null);
+  const timeInterval = useRef<ReturnType<typeof setInterval> | null>(null);
+  const transcriptionInterval = useRef<ReturnType<typeof setInterval> | null>(null);
   const animationRefs = useRef<Animatable.View[]>([]);
   const audioLevelAnimation = useRef(new Animated.Value(0)).current;
   const pulseAnimation = useRef(new Animated.Value(1)).current;
+  const blinkAnimation = useRef(new Animated.Value(1)).current;
 
   // Timer for recording
   useEffect(() => {
@@ -121,6 +124,30 @@ export default function RecordPage() {
     }
   }, [isRecording]);
 
+  // Blinking animation for live indicator
+  useEffect(() => {
+    if (isRecording) {
+      const blink = Animated.loop(
+        Animated.sequence([
+          Animated.timing(blinkAnimation, {
+            toValue: 0.3,
+            duration: 500,
+            useNativeDriver: true,
+          }),
+          Animated.timing(blinkAnimation, {
+            toValue: 1,
+            duration: 500,
+            useNativeDriver: true,
+          }),
+        ])
+      );
+      blink.start();
+      return () => blink.stop();
+    } else {
+      blinkAnimation.setValue(1);
+    }
+  }, [isRecording]);
+
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
@@ -190,15 +217,21 @@ export default function RecordPage() {
         });
       });
       
-      if (session) {
-        console.log('Recording completed successfully, session:', session);
+      if (session && session.id) {
+        console.log('✅ Recording completed successfully, session:', session.id);
+        
+        // Wait a moment to ensure database is ready
+        await new Promise(resolve => setTimeout(resolve, 1000));
         
         setIsProcessing(false);
         setProcessingProgress(null);
         
-        // Navigate to recording result page
+        // Navigate to recording result page with session ID
         console.log('Navigating to recording result with session ID:', session.id);
-        router.push(`/recording-result?sessionId=${session.id}`);
+        router.push({
+          pathname: '/recording-result',
+          params: { sessionId: session.id }
+        });
       } else {
         setIsProcessing(false);
         setProcessingProgress(null);
@@ -310,77 +343,85 @@ export default function RecordPage() {
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
+      <StatusBar barStyle="light-content" backgroundColor="#000000" />
       
-      {/* Header with Background Image */}
-      <View style={styles.header}>
-        <Image 
-          source={require('../../assets/images/bg.jpg')}
-          style={styles.headerBackground}
-          resizeMode="cover"
-        />
-        <View style={styles.headerBlurOverlay} />
+      {/* Header with Black Background */}
+      <View style={[styles.header, { paddingTop: insets.top }]}>
         <View style={styles.headerContent}>
-          <TouchableOpacity onPress={handleBack} style={styles.navButton}>
-            <ArrowLeft size={24} color="#FFFFFF" />
-          </TouchableOpacity>
-          
-          <View style={styles.navCenter}>
-            <Image 
-              source={require('../../assets/images/logo.png')} 
-              style={styles.headerLogo}
-              resizeMode="contain"
-            />
+          <View style={styles.headerLeft}>
+            <TouchableOpacity 
+              style={styles.backButton}
+              onPress={handleBack}
+              activeOpacity={0.8}
+            >
+              <ArrowLeft size={24} color="#FFFFFF" />
+            </TouchableOpacity>
           </View>
           
-          <View style={styles.navSpacer} />
+          <View style={styles.headerCenter}>
+            <Text style={styles.headerLogo}>Notetaker</Text>
+          </View>
+          
+          <View style={styles.headerRight} />
         </View>
       </View>
 
-      {/* AI Feature Indicator */}
-      <View style={styles.aiIndicator}>
-        <View style={styles.aiButton}>
-          <Text style={styles.aiText}>Powered by AI</Text>
+      <View style={styles.content}>
+        {/* AI Feature Indicator */}
+        <View style={styles.aiIndicator}>
+          <View style={styles.aiButton}>
+            <Text style={styles.aiText}>Powered by AI</Text>
+          </View>
         </View>
-      </View>
 
-      {/* Session Title */}
-      <Text style={styles.title}>
-        {isProcessing ? 'Processing Recording...' : 'Session is recording'}
-      </Text>
+        {/* Session Title */}
+        <Text style={styles.title}>
+          {isProcessing ? 'Processing Recording...' : isRecording ? 'Recording in progress' : 'Ready to record'}
+        </Text>
 
-      {/* Recording Time */}
-      <Text style={styles.time}>{formatTime(recordingTime)}</Text>
+        {/* Recording Time with Live Indicator */}
+        <View style={styles.timeContainer}>
+          {isRecording && (
+            <Animated.View 
+              style={[
+                styles.liveIndicator,
+                { opacity: blinkAnimation }
+              ]}
+            />
+          )}
+          <Text style={styles.time}>{formatTime(recordingTime)}</Text>
+        </View>
 
-      {/* Audio Visualizer */}
-      <View style={styles.visualizerContainer}>
-        {Array.from({ length: 20 }, (_, i) => (
-          <Animated.View
-            key={i}
-            style={[
-              styles.visualizerBar,
-              {
-                height: isRecording 
-                  ? audioLevelAnimation.interpolate({
-                      inputRange: [0, 100],
-                      outputRange: [4, 40],
-                      extrapolate: 'clamp',
-                    })
-                  : 4,
-                backgroundColor: isRecording ? '#4A90E2' : '#E0E0E0',
-              }
-            ]}
+        {/* Audio Visualizer */}
+        <View style={styles.visualizerContainer}>
+          {Array.from({ length: 20 }, (_, i) => (
+            <Animated.View
+              key={i}
+              style={[
+                styles.visualizerBar,
+                {
+                  height: isRecording 
+                    ? audioLevelAnimation.interpolate({
+                        inputRange: [0, 100],
+                        outputRange: [4, 40],
+                        extrapolate: 'clamp',
+                      })
+                    : 4,
+                  backgroundColor: isRecording ? '#FF9500' : '#E0E0E0',
+                }
+              ]}
+            />
+          ))}
+        </View>
+
+        {/* Central Recording Area */}
+        <View style={styles.recordingArea}>
+          <Image 
+            source={require('../../assets/images/sound.png')} 
+            style={styles.micImage}
+            resizeMode="contain"
           />
-        ))}
-      </View>
-
-      {/* Central Recording Area */}
-      <View style={styles.recordingArea}>
-        <Image 
-          source={require('../../assets/images/loud.png')} 
-          style={styles.micImage}
-          resizeMode="contain"
-        />
+        </View>
       </View>
 
       {/* Real-time Transcription - Hidden temporarily */}
@@ -425,10 +466,10 @@ export default function RecordPage() {
       <View style={styles.bottomControls}>
         {/* Language Button */}
         <TouchableOpacity 
-          style={[styles.controlButton, language === 'BI' && styles.activeLanguageButton]}
+          style={[styles.controlButton, styles.languageButton, (language === 'BM' || language === 'BI') && styles.activeLanguageButton]}
           onPress={() => setLanguage(language === 'BM' ? 'BI' : 'BM')}
         >
-          <Text style={[styles.controlButtonText, language === 'BI' && styles.activeLanguageText]}>{language}</Text>
+          <Text style={[styles.controlButtonText, (language === 'BM' || language === 'BI') && styles.activeLanguageText]}>{language}</Text>
         </TouchableOpacity>
 
         {/* Main Control Button */}
@@ -439,7 +480,7 @@ export default function RecordPage() {
             disabled={isProcessing}
           >
             <LinearGradient
-              colors={isRecording ? ['#FF6B6B', '#FF8E8E'] : ['#4A90E2', '#6BB6FF']}
+              colors={['#FF9500', '#FFB84D']}
               style={styles.mainControlGradient}
             >
               {isProcessing ? (
@@ -470,54 +511,69 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#FFFFFF',
   },
+  content: {
+    flex: 1,
+  },
   header: {
-    height: 100,
     position: 'relative',
     overflow: 'hidden',
-  },
-  headerBackground: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    width: '100%',
-    height: '100%',
-  },
-  headerBlurOverlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.1)',
-    backdropFilter: 'blur(2px)',
+    zIndex: 100,
+    backgroundColor: '#000000',
   },
   headerContent: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
+    justifyContent: 'space-between',
     paddingHorizontal: 20,
-    paddingTop: 50,
-    paddingBottom: 20,
-    height: '100%',
+    paddingTop: 12,
+    paddingBottom: 12,
     position: 'relative',
-    zIndex: 10,
+    zIndex: 200,
+    pointerEvents: 'box-none',
+    minHeight: 60,
   },
-  navButton: {
-    padding: 8,
+  headerLeft: {
+    width: 44,
+    alignItems: 'flex-start',
+    justifyContent: 'center',
+    zIndex: 201,
+    pointerEvents: 'box-none',
   },
-  navCenter: {
+  headerCenter: {
     flex: 1,
+    zIndex: 201,
+    pointerEvents: 'none',
     alignItems: 'center',
     justifyContent: 'center',
+    paddingHorizontal: 10,
+  },
+  headerRight: {
+    width: 44,
+    alignItems: 'flex-end',
+    justifyContent: 'center',
+    zIndex: 201,
+    pointerEvents: 'box-none',
+  },
+  backButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.2)',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
   headerLogo: {
-    width: 120,
-    height: 40,
-  },
-  navSpacer: {
-    width: 40,
+    fontSize: 24,
+    fontFamily: 'Fredoka-SemiBold',
+    color: '#FFFFFF',
+    fontWeight: '600',
   },
   aiIndicator: {
     alignItems: 'center',
@@ -552,12 +608,29 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     lineHeight: 34,
   },
+  timeContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 30,
+    gap: 12,
+  },
+  liveIndicator: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    backgroundColor: '#FF0000',
+    shadowColor: '#FF0000',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.8,
+    shadowRadius: 8,
+    elevation: 4,
+  },
   time: {
     fontSize: 64,
     fontWeight: '300',
     color: '#333333',
     textAlign: 'center',
-    marginBottom: 30,
   },
   visualizerContainer: {
     flexDirection: 'row',
@@ -578,6 +651,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     paddingHorizontal: 20,
+    minHeight: 200,
   },
   micImage: {
     width: 280,
@@ -615,13 +689,16 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
+  languageButton: {
+    backgroundColor: '#F5F5F5',
+  },
   controlButtonText: {
     fontSize: 18,
     color: '#666666',
     fontWeight: '500',
   },
   activeLanguageButton: {
-    backgroundColor: '#4A90E2',
+    backgroundColor: '#FF9500',
   },
   activeLanguageText: {
     color: '#FFFFFF',

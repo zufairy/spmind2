@@ -434,7 +434,7 @@ export default function HomeScreen() {
         <View style={styles.header}>
           <View style={styles.headerLeft}>
             <Image 
-              source={require('../assets/images/logow.png')} 
+              source={require('../assets/images/Logo_Long.png')} 
               style={styles.headerLogo}
               resizeMode="contain"
             />

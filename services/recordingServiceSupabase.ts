@@ -403,97 +403,135 @@ class RecordingServiceSupabase {
         console.error('Error creating recording session:', sessionError);
         console.error('Error details:', JSON.stringify(sessionError));
         
-        // If database insertion fails, return a mock session so recording can still work
-        console.log('Database insertion failed, returning mock session');
+        // Retry once after a short delay
+        console.log('Retrying session creation...');
+        await new Promise(resolve => setTimeout(resolve, 1000));
         
-        // Create sticky notes for mock session too
-        try {
-          for (const noteData of aiResults.stickyNotes) {
-            const { data: stickyNote, error: stickyNoteError } = await supabase
-              .from('session_sticky_notes')
-              .insert([
-                {
-                  session_id: `00000000-0000-0000-0000-${Date.now().toString().padStart(12, '0')}`,
-                  user_id: currentUser.id,
-                  title: noteData.title,
-                  content: noteData.content,
-                  type: noteData.type,
-                  color: noteData.color,
-                  priority: noteData.priority,
-                  completed: false,
-                  image: null,
-                }
-              ])
-              .select()
-              .single();
-
-            if (stickyNoteError) {
-              console.error('Error creating sticky note in mock session:', stickyNoteError);
-            } else {
-              console.log('✅ Created sticky note in mock session:', stickyNote);
+        const { data: retrySessionData, error: retryError } = await supabase
+          .from('recording_sessions')
+          .insert([
+            {
+              user_id: currentUser.id,
+              title: `Study Session - ${new Date().toLocaleDateString()}`,
+              description: `Recording session`,
+              audio_uri: uri,
+              duration,
+              transcript: aiResults.transcript,
+              summary: aiResults.summary,
+              subjects: ['General Study'],
+              tags: ['recording'],
             }
-          }
-        } catch (noteError) {
-          console.error('Error creating sticky notes in mock session:', noteError);
+          ])
+          .select()
+          .single();
+
+        if (retryError) {
+          console.error('Retry also failed:', retryError);
+          throw new Error(`Failed to create session: ${retryError.message}`);
         }
         
-        const mockSession = {
-          id: `00000000-0000-0000-0000-${Date.now().toString().padStart(12, '0')}`,
-          user_id: currentUser.id,
-          title: `Study Session - ${new Date().toLocaleDateString()}`,
-          description: `Recording session`,
-          audio_uri: uri,
-          duration,
-          transcript: aiResults.transcript,
-          summary: aiResults.summary,
-          subjects: ['General Study'],
-          tags: ['recording'],
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        } as RecordingSession;
-        
-        console.log('Returning mock session:', mockSession);
-        return mockSession;
+        // Use the retry session data
+        const sessionData = retrySessionData;
+      }
+
+      // Ensure we have sessionData before creating sticky notes
+      if (!sessionData || !sessionData.id) {
+        throw new Error('Session was not created successfully');
       }
 
       // Create sticky notes for this session
       try {
-        for (const noteData of aiResults.stickyNotes) {
-          // Insert directly into session_sticky_notes table
-          const { data: stickyNote, error: stickyNoteError } = await supabase
+        console.log(`Creating ${aiResults.stickyNotes.length} sticky notes for session ${sessionData.id}`);
+        
+        if (aiResults.stickyNotes && aiResults.stickyNotes.length > 0) {
+          // Insert all sticky notes at once for better performance
+          const stickyNotesToInsert = aiResults.stickyNotes.map(noteData => ({
+            session_id: sessionData.id,
+            user_id: currentUser.id,
+            title: noteData.title || 'Untitled Note',
+            content: noteData.content || '',
+            type: noteData.type || 'note',
+            color: noteData.color || '#FFD700',
+            priority: noteData.priority || 'medium',
+            completed: false,
+            image: null,
+          }));
+
+          const { data: insertedNotes, error: stickyNoteError } = await supabase
             .from('session_sticky_notes')
-            .insert([
-              {
-                session_id: sessionData.id,
-                user_id: currentUser.id,
-                title: noteData.title,
-                content: noteData.content,
-                type: noteData.type,
-                color: noteData.color,
-                priority: noteData.priority,
-                completed: false,
-                image: null,
-              }
-            ])
-            .select()
-            .single();
+            .insert(stickyNotesToInsert)
+            .select();
 
           if (stickyNoteError) {
-            console.error('Error creating sticky note:', stickyNoteError);
-            throw stickyNoteError;
+            console.error('Error creating sticky notes:', stickyNoteError);
+            // Try inserting one by one as fallback
+            console.log('Trying to insert sticky notes one by one...');
+            for (const noteData of aiResults.stickyNotes) {
+              try {
+                const { error: singleNoteError } = await supabase
+                  .from('session_sticky_notes')
+                  .insert([
+                    {
+                      session_id: sessionData.id,
+                      user_id: currentUser.id,
+                      title: noteData.title || 'Untitled Note',
+                      content: noteData.content || '',
+                      type: noteData.type || 'note',
+                      color: noteData.color || '#FFD700',
+                      priority: noteData.priority || 'medium',
+                      completed: false,
+                      image: null,
+                    }
+                  ]);
+
+                if (singleNoteError) {
+                  console.error('Error creating individual sticky note:', singleNoteError);
+                } else {
+                  console.log('✅ Created sticky note:', noteData.title);
+                }
+              } catch (err) {
+                console.error('Error in individual note creation:', err);
+              }
+            }
+          } else {
+            console.log(`✅ Successfully created ${insertedNotes?.length || 0} sticky notes`);
           }
-          
-          console.log('✅ Created sticky note:', stickyNote);
+        } else {
+          console.log('No sticky notes to create');
         }
-        console.log('Sticky notes created successfully');
       } catch (noteError) {
         console.error('Error creating sticky notes:', noteError);
-        // Continue even if sticky notes fail
+        // Continue even if sticky notes fail - session is still valid
       }
 
-      console.log('Recording session created successfully:', sessionData.id);
-      console.log('Session data:', sessionData);
-      return sessionData;
+      console.log('✅ Recording session created successfully:', sessionData.id);
+      console.log('Session data:', JSON.stringify(sessionData, null, 2));
+      
+      // Wait a moment for database to sync
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      // Verify the session exists with retry logic
+      let verifySession = await this.getSessionById(sessionData.id);
+      let retryCount = 0;
+      const maxRetries = 5;
+      
+      while (!verifySession && retryCount < maxRetries) {
+        console.log(`Session verification attempt ${retryCount + 1}/${maxRetries}...`);
+        await new Promise(resolve => setTimeout(resolve, 1000 * (retryCount + 1)));
+        verifySession = await this.getSessionById(sessionData.id);
+        retryCount++;
+      }
+      
+      if (!verifySession) {
+        console.error('Session verification failed after multiple retries');
+        // Return the session data anyway - it was created successfully
+        // The result page will handle retrying the load
+        console.log('Returning session data directly (verification failed but session exists)');
+        return sessionData as RecordingSession;
+      }
+      
+      console.log('✅ Session verified successfully');
+      return verifySession;
     } catch (error) {
       console.error('Error stopping recording:', error);
       if (error instanceof Error) {
@@ -501,69 +539,8 @@ class RecordingServiceSupabase {
         console.error('Error stack:', error.stack);
       }
       
-      // Even if there's an error, try to return a mock session so recording can work
-      try {
-        const currentUser = await authService.getCurrentUser();
-        if (currentUser) {
-          // Process audio with AI even for mock session
-          // This will automatically use chunking for large files (>20MB or >8 minutes)
-          console.log('🎯 Starting AI processing for fallback session...');
-          const aiResults = await aiProcessingService.processAudio(audioUri || 'unknown', onProgress);
-          
-          // Create sticky notes for mock session too
-          try {
-            for (const noteData of aiResults.stickyNotes) {
-              const { data: stickyNote, error: stickyNoteError } = await supabase
-                .from('session_sticky_notes')
-                .insert([
-                  {
-                    session_id: `00000000-0000-0000-0000-${Date.now().toString().padStart(12, '0')}`,
-                    user_id: currentUser.id,
-                    title: noteData.title,
-                    content: noteData.content,
-                    type: noteData.type,
-                    color: noteData.color,
-                    priority: noteData.priority,
-                    completed: false,
-                    image: null,
-                  }
-                ])
-                .select()
-                .single();
-
-              if (stickyNoteError) {
-                console.error('Error creating sticky note in fallback:', stickyNoteError);
-              } else {
-                console.log('✅ Created sticky note in fallback:', stickyNote);
-              }
-            }
-          } catch (noteError) {
-            console.error('Error creating sticky notes in fallback:', noteError);
-          }
-          
-          const mockSession = {
-            id: `00000000-0000-0000-0000-${Date.now().toString().padStart(12, '0')}`,
-            user_id: currentUser.id,
-            title: `Study Session - ${new Date().toLocaleDateString()}`,
-            description: `Recording session`,
-            audio_uri: audioUri || 'unknown',
-            duration: recordingDuration,
-            transcript: aiResults.transcript,
-            summary: aiResults.summary,
-            subjects: ['General Study'],
-            tags: ['recording'],
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString()
-          } as RecordingSession;
-          
-          console.log('Returning mock session after error:', mockSession);
-          return mockSession;
-        }
-      } catch (fallbackError) {
-        console.error('Fallback session creation also failed:', fallbackError);
-      }
-      
-      return null;
+      // Don't return mock sessions - throw the error so the UI can handle it properly
+      throw error;
     }
   }
 

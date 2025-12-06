@@ -782,7 +782,7 @@ export default function ProfileScreen() {
         {/* Modern Header with Background Image */}
         <View style={styles.header}>
           <Image 
-            source={require('../../assets/images/bg.jpg')}
+            source={require('../../assets/images/mobile.gif')}
             style={styles.headerBackground}
             resizeMode="cover"
           />

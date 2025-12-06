@@ -57,6 +57,7 @@ export default function HomeScreen() {
   const imageScale = useRef(new Animated.Value(1)).current;
   const pageFadeAnim = useRef(new Animated.Value(0)).current;
   const lottieRef = useRef<any>(null);
+  const todayFlamePulse = useRef(new Animated.Value(1)).current;
 
   // Preload all images for instant switching
   const [imagesLoaded, setImagesLoaded] = useState(false);
@@ -110,6 +111,28 @@ export default function HomeScreen() {
         Animated.timing(flameScale, {
           toValue: 1,
           duration: 1000,
+          useNativeDriver: true,
+        }),
+      ])
+    );
+    animation.start();
+    
+    // Cleanup - Stop animation when component unmounts
+    return () => animation.stop();
+  }, []);
+
+  // Today's flame pulsing animation
+  useEffect(() => {
+    const animation = Animated.loop(
+      Animated.sequence([
+        Animated.timing(todayFlamePulse, {
+          toValue: 1.15,
+          duration: 800,
+          useNativeDriver: true,
+        }),
+        Animated.timing(todayFlamePulse, {
+          toValue: 1,
+          duration: 800,
           useNativeDriver: true,
         }),
       ])
@@ -558,7 +581,7 @@ export default function HomeScreen() {
     <SimpleAvatarInteraction enableTimeBased={true}>
     <Animated.View style={[styles.container, { opacity: pageFadeAnim }]}>
       <AvatarSoundSystem enableSounds={false} volume={0.7} />
-      <StatusBar barStyle="light-content" backgroundColor="#000000" />
+      <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
       
       {/* Loading overlay */}
       {!imagesLoaded && (
@@ -600,7 +623,7 @@ export default function HomeScreen() {
           <View style={styles.avatarContainer}>
             <LottieView
               ref={lottieRef}
-              source={require('../../assets/animation.json')}
+              source={require('../../assets/images/animation (2).json')}
               autoPlay={true}
               loop={true}
               style={styles.lottieView}
@@ -657,23 +680,18 @@ export default function HomeScreen() {
         </Animated.View>
       </View>
 
-      {/* Streak Section - After Avatar */}
-      <View style={styles.streakSection}>
+      {/* New Horizontal Streak Container */}
+      <View style={styles.horizontalStreakSection}>
         <Animatable.View 
           animation="fadeInUp"
-          delay={600}
+          delay={800}
           duration={800}
-          style={styles.streakContainer}
+          style={styles.horizontalStreakContainer}
         >
-          <LinearGradient
-            colors={['#4A1F1F', '#661D1D', '#1F1F1F']}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={styles.streakGradient}
-          >
+          <View style={styles.horizontalStreakGradient}>
             {/* Headline on top */}
-            <View style={styles.streakHeader}>
-              <Text style={styles.streakTitle}>
+            <View style={styles.horizontalStreakHeader}>
+              <Text style={styles.horizontalStreakTitle}>
                 {currentStreak > 0 
                   ? `${currentStreak} Days streak, You're on fire!`
                   : "Start your streak today!"}
@@ -681,55 +699,64 @@ export default function HomeScreen() {
             </View>
 
             {/* Fire icon and progress */}
-            <View style={styles.streakContent}>
-              <View style={styles.streakLeftSection}>
-                <View style={styles.flameIconContainer}>
-                  <Animated.Text style={[
-                    styles.flameEmoji,
+            <View style={styles.horizontalStreakContent}>
+              <View style={styles.horizontalStreakLeftSection}>
+                <View style={styles.horizontalFlameIconContainer}>
+                  <Animated.View style={[
                     { transform: [{ scale: flameScale }] }
                   ]}>
-                    🔥
-                  </Animated.Text>
-                  <Text style={styles.streakNumber}>{currentStreak}</Text>
+                    <Image 
+                      source={require('../../assets/images/flame.png')}
+                      style={styles.horizontalFlameIcon}
+                      resizeMode="contain"
+                    />
+                  </Animated.View>
+                  <Text style={styles.horizontalStreakNumber}>{currentStreak}</Text>
+                  {currentStreak > 0 && (
+                    <Text style={styles.keepUpText}>Keep up!</Text>
+                  )}
                 </View>
               </View>
-              <View style={styles.streakRightSection}>
-                <View style={styles.weeklyProgress}>
-                  {weekDates.map((dayInfo, index) => (
+              <View style={styles.horizontalStreakRightSection}>
+                <View style={styles.horizontalWeeklyProgress}>
+                  {weekDates.slice(0, 7).map((dayInfo, index) => (
                     <Animatable.View
-                      key={`${dayInfo.month}-${dayInfo.date}`}
+                      key={`horizontal-${dayInfo.month}-${dayInfo.date}-${index}`}
                       animation="bounceIn"
-                      delay={700 + (index * 100)}
+                      delay={900 + (index * 100)}
                       duration={600}
-                      style={styles.dayContainer}
+                      style={styles.horizontalDayContainer}
                     >
-                      <LinearGradient
-                        colors={
-                          weekProgress[index]
-                            ? ['#EF4444', '#DC2626', '#B91C1C']
-                            : ['rgba(153, 27, 27, 0.3)', 'rgba(127, 29, 29, 0.2)']
-                        }
-                        start={{ x: 0, y: 0 }}
-                        end={{ x: 1, y: 1 }}
-                        style={[
-                          styles.dayCircle,
-                          dayInfo.isToday && styles.todayHighlight
-                        ]}
-                      >
-                        {weekProgress[index] ? (
-                          <Text style={styles.checkmark}>✓</Text>
+                      <View style={styles.horizontalDayCircle}>
+                        {dayInfo.isToday ? (
+                          <Animated.View style={[
+                            { transform: [{ scale: todayFlamePulse }] }
+                          ]}>
+                            <Image 
+                              source={require('../../assets/images/flame.png')}
+                              style={styles.horizontalDayFlameIcon}
+                              resizeMode="contain"
+                            />
+                          </Animated.View>
                         ) : (
-                          <Text style={styles.xMark}>✗</Text>
+                          <Image 
+                            source={weekProgress[index]
+                              ? require('../../assets/images/flame.png')
+                              : require('../../assets/images/whiteflame.png')
+                            }
+                            style={styles.horizontalDayFlameIcon}
+                            resizeMode="contain"
+                          />
                         )}
-                      </LinearGradient>
-                      <Text style={styles.dateNumber}>{dayInfo.date}</Text>
-                      <Text style={styles.dayLabel}>{dayInfo.day}</Text>
+                      </View>
+                      <Text style={styles.horizontalDateNumber}>{dayInfo.date}</Text>
+                      <Text style={styles.horizontalDayLabel}>{dayInfo.day}</Text>
                     </Animatable.View>
                   ))}
                 </View>
               </View>
             </View>
-          </LinearGradient>
+          </View>
         </Animatable.View>
       </View>
 
@@ -979,7 +1006,7 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#000000',
+    backgroundColor: '#FFFFFF',
   },
   loadingOverlay: {
     position: 'absolute',
@@ -1111,17 +1138,19 @@ const styles = StyleSheet.create({
     marginTop: -20,
   },
   avatarContainer: {
-    width: 200,
-    height: 240,
-    marginLeft: 0,
+    width: 150,
+    height: 180,
+    marginLeft: -20,
     marginTop: 0,
   },
   bubbleWrapper: {
     flex: 1,
-    marginLeft: 5,
+    marginLeft: -15,
     marginTop: 60,
     marginRight: 10,
     alignSelf: 'flex-start',
+    minWidth: 200,
+    maxWidth: '75%',
   },
   textBubble: {
     borderRadius: 20,
@@ -1783,7 +1812,7 @@ const styles = StyleSheet.create({
   dailyBoostButton: {
     height: 120,
     borderRadius: 18,
-    overflow: 'hidden',
+    overflow: 'visible',
     position: 'relative',
     backgroundColor: '#FF8C42',
     borderWidth: 0,
@@ -1821,8 +1850,8 @@ const styles = StyleSheet.create({
   },
   dailyBoostImageContainer: {
     position: 'absolute',
-    right: 0,
-    bottom: 0,
+    right: -4,
+    bottom: -4,
     width: 160,
     height: 160,
     zIndex: 1,
@@ -1832,5 +1861,140 @@ const styles = StyleSheet.create({
   dailyBoostBackground: {
     width: 160,
     height: 160,
+    position: 'absolute',
+    bottom: 0,
+    right: 0,
+  },
+  horizontalStreakSection: {
+    paddingHorizontal: 20,
+    paddingTop: 4,
+    paddingBottom: 4,
+    marginTop: -40,
+    marginBottom: 4,
+  },
+  horizontalStreakContainer: {
+    borderRadius: 20,
+    overflow: 'visible',
+    backgroundColor: '#FF6B35',
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    elevation: 4,
+    zIndex: 99999,
+  },
+  horizontalStreakGradient: {
+    padding: 20,
+    borderRadius: 20,
+    backgroundColor: '#FF6B35',
+    borderBottomWidth: 4,
+    borderRightWidth: 4,
+    borderBottomColor: '#E55A2B',
+    borderRightColor: '#E55A2B',
+  },
+  horizontalStreakHeader: {
+    marginBottom: 20,
+  },
+  horizontalStreakTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    fontFamily: 'Inter-Bold',
+    color: '#FFFFFF',
+    marginBottom: 4,
+  },
+  horizontalStreakContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 16,
+  },
+  horizontalStreakLeftSection: {
+    alignItems: 'center',
+    minWidth: 100,
+  },
+  horizontalFlameIconContainer: {
+    width: 70,
+    minHeight: 80,
+    borderRadius: 16,
+    backgroundColor: '#FFFFFF',
+    alignItems: 'center',
+    justifyContent: 'flex-start',
+    paddingTop: 6,
+    paddingBottom: 6,
+    borderWidth: 0,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+    marginBottom: 8,
+  },
+  horizontalFlameIcon: {
+    width: 40,
+    height: 40,
+    marginBottom: 4,
+  },
+  horizontalStreakNumber: {
+    fontSize: 16,
+    fontWeight: '700',
+    fontFamily: 'Inter-Bold',
+    color: '#FF6B35',
+    marginBottom: 2,
+  },
+  keepUpText: {
+    fontSize: 11,
+    fontWeight: '600',
+    fontFamily: 'Fredoka-SemiBold',
+    color: '#000000',
+    marginTop: 2,
+    textAlign: 'center',
+  },
+  horizontalStreakRightSection: {
+    flex: 1,
+  },
+  horizontalWeeklyProgress: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    gap: 4,
+    flex: 1,
+  },
+  horizontalDayContainer: {
+    alignItems: 'center',
+    justifyContent: 'flex-start',
+    flex: 1,
+    minWidth: 0,
+  },
+  horizontalDayCircle: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 6,
+    overflow: 'hidden',
+    backgroundColor: 'transparent',
+  },
+  horizontalDayFlameIcon: {
+    width: 28,
+    height: 28,
+  },
+  horizontalDateNumber: {
+    fontSize: 13,
+    fontWeight: '700',
+    fontFamily: 'Inter-Bold',
+    color: '#FFFFFF',
+    marginTop: 2,
+    textAlign: 'center',
+  },
+  horizontalDayLabel: {
+    fontSize: 9,
+    fontWeight: '500',
+    fontFamily: 'Inter-Medium',
+    color: '#FFFFFF',
+    opacity: 0.7,
+    marginTop: 1,
+    letterSpacing: 0.2,
+    textTransform: 'uppercase',
+    textAlign: 'center',
   },
 });

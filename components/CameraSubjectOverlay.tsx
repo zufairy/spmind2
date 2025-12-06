@@ -112,7 +112,7 @@ export default function CameraSubjectOverlay({
       {/* Logo at top middle */}
       <View style={styles.logoContainer}>
         <Image 
-          source={require('../assets/images/logo.png')} 
+          source={require('../assets/images/Logo_Long.png')} 
           style={styles.logoImage}
           resizeMode="contain"
         />
