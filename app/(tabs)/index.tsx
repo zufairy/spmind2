@@ -497,6 +497,9 @@ export default function HomeScreen() {
         {isFocused && (
           <View style={styles.avatarContainer}>
             <WebView
+              startInLoadingState={false}
+              cacheEnabled={true}
+              cacheMode="LOAD_CACHE_ELSE_NETWORK"
               source={{
               html: `
                 <!DOCTYPE html>

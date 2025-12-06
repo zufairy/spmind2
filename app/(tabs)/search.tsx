@@ -999,7 +999,7 @@ Respond as Cikgu SPMind - warm, helpful, and naturally Malaysian!`;
   return (
     <RNAnimated.View style={[styles.container, dynamicStyles.container, { opacity: pageFadeAnim }]}>
       {/* Header with Black Background */}
-      <View style={[styles.header, { paddingTop: insets.top }]}>
+      <View style={styles.header}>
         <View style={styles.headerContent}>
           {/* Switch moved to profile picture place */}
           <View style={styles.headerLeft}>
@@ -1010,7 +1010,14 @@ Respond as Cikgu SPMind - warm, helpful, and naturally Malaysian!`;
                 onPress={() => handleTabSwitch('image')}
                 activeOpacity={0.7}
               >
-                <CameraIcon size={16} color={activeTab === 'image' ? '#FFFFFF' : '#FFB366'} />
+                <Image 
+                  source={require('../../assets/images/cameratake.png')} 
+                  style={[
+                    styles.cameraButtonIcon,
+                    { opacity: activeTab === 'image' ? 1 : 0.6 }
+                  ]}
+                  resizeMode="contain"
+                />
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.premiumTabButton, activeTab === 'chat' && styles.activePremiumTab]}
@@ -1315,12 +1322,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 20,
-    paddingTop: 12,
-    paddingBottom: 12,
+    paddingTop: 50,
+    paddingBottom: 20,
     position: 'relative',
     zIndex: 200,
     pointerEvents: 'box-none',
-    minHeight: 60,
   },
   headerLeft: {
     width: 80,
@@ -1453,6 +1459,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     zIndex: 301,
     pointerEvents: 'auto',
+  },
+  cameraButtonIcon: {
+    width: 18,
+    height: 18,
   },
   activePremiumTab: {
     backgroundColor: 'transparent',
