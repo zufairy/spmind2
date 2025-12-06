@@ -1073,7 +1073,7 @@ export default function ProfileScreen() {
               <View style={{ flexDirection: 'row', gap: 12 }}>
                 {unreadCount > 0 && (
                   <TouchableOpacity onPress={handleMarkAllAsRead}>
-                    <Text style={{ color: '#FF8C00', fontSize: 14, fontFamily: 'Inter-Medium' }}>
+                    <Text style={{ color: '#FF8C00', fontSize: 14, fontFamily: 'Fredoka-Medium' }}>
                       Mark all read
                     </Text>
                   </TouchableOpacity>
@@ -1484,7 +1484,7 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     fontSize: 28,
-    fontFamily: 'SpaceGrotesk-Bold',
+    fontFamily: 'Fredoka-Bold',
     color: '#FFFFFF',
     fontWeight: '700',
   },
@@ -1519,7 +1519,7 @@ const styles = StyleSheet.create({
   },
   notificationText: {
     fontSize: 10,
-    fontFamily: 'Inter-Bold',
+    fontFamily: 'Fredoka-Bold',
     color: '#FFFFFF',
   },
   profileSection: {
@@ -1551,7 +1551,7 @@ const styles = StyleSheet.create({
   },
   avatarText: {
     fontSize: 36,
-    fontFamily: 'Inter-Bold',
+    fontFamily: 'Fredoka-Bold',
     color: '#FF8C00',
     fontWeight: '700',
   },
@@ -1594,20 +1594,20 @@ const styles = StyleSheet.create({
   },
   username: {
     fontSize: 22,
-    fontFamily: 'Inter-Bold',
+    fontFamily: 'Fredoka-Bold',
     color: '#FFFFFF',
     fontWeight: '700',
   },
   userHandleInline: {
     fontSize: 14,
-    fontFamily: 'Inter-Regular',
+    fontFamily: 'Fredoka-Regular',
     color: '#FFFFFF',
     fontWeight: '400',
     opacity: 0.8,
   },
   userHandle: {
     fontSize: 13,
-    fontFamily: 'Inter-Regular',
+    fontFamily: 'Fredoka-Regular',
     color: '#999999',
     marginBottom: 6,
   },
@@ -1631,26 +1631,26 @@ const styles = StyleSheet.create({
   },
   userLevel: {
     fontSize: 15,
-    fontFamily: 'Inter-Medium',
+    fontFamily: 'Fredoka-Medium',
     color: '#FFFFFF',
     fontWeight: '600',
   },
   userSchool: {
     fontSize: 14,
-    fontFamily: 'Inter-Regular',
+    fontFamily: 'Fredoka-Regular',
     color: '#FFFFFF',
     marginBottom: 3,
     opacity: 0.9,
   },
   userGrade: {
     fontSize: 14,
-    fontFamily: 'Inter-Regular',
+    fontFamily: 'Fredoka-Regular',
     color: '#FFFFFF',
     opacity: 0.9,
   },
   userRank: {
     fontSize: 16,
-    fontFamily: 'Inter-Medium',
+    fontFamily: 'Fredoka-Medium',
     color: '#CCCCCC',
     marginBottom: 8,
   },
@@ -1666,7 +1666,7 @@ const styles = StyleSheet.create({
   },
   statusText: {
     fontSize: 14,
-    fontFamily: 'Inter-Medium',
+    fontFamily: 'Fredoka-Medium',
     color: '#CCCCCC',
   },
   statsSection: {
@@ -1707,14 +1707,14 @@ const styles = StyleSheet.create({
   },
   statNumber: {
     fontSize: 20,
-    fontFamily: 'Inter-Bold',
+    fontFamily: 'Fredoka-Bold',
     color: '#000000',
     marginBottom: 4,
     fontWeight: '700',
   },
   statLabel: {
     fontSize: 12,
-    fontFamily: 'Inter-Medium',
+    fontFamily: 'Fredoka-Medium',
     color: '#666666',
     fontWeight: '500',
   },
@@ -1769,14 +1769,14 @@ const styles = StyleSheet.create({
   },
   premiumTitle3D: {
     fontSize: 20,
-    fontFamily: 'Inter-Bold',
+    fontFamily: 'Fredoka-Bold',
     color: '#FFFFFF',
     marginBottom: 4,
     fontWeight: '700',
   },
   premiumSubtitle3D: {
     fontSize: 14,
-    fontFamily: 'Inter-Regular',
+    fontFamily: 'Fredoka-Regular',
     color: 'rgba(255, 255, 255, 0.95)',
   },
   premiumArrow3D: {
@@ -1791,7 +1791,7 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontSize: 20,
-    fontFamily: 'Inter-Bold',
+    fontFamily: 'Fredoka-Bold',
     color: '#000000',
     marginBottom: 16,
     fontWeight: '700',
@@ -1834,7 +1834,7 @@ const styles = StyleSheet.create({
   },
   menuTitle: {
     fontSize: 16,
-    fontFamily: 'Inter-Medium',
+    fontFamily: 'Fredoka-Medium',
     color: '#000000',
     fontWeight: '500',
   },
@@ -1886,7 +1886,7 @@ const styles = StyleSheet.create({
   },
   levelNumber: {
     fontSize: 28,
-    fontFamily: 'Inter-Bold',
+    fontFamily: 'Fredoka-Bold',
     color: '#FFFFFF',
     textShadowColor: 'rgba(0, 0, 0, 0.5)',
     textShadowOffset: { width: 0, height: 2 },
@@ -1894,14 +1894,14 @@ const styles = StyleSheet.create({
   },
   currentRank: {
     fontSize: 20,
-    fontFamily: 'Inter-Bold',
+    fontFamily: 'Fredoka-Bold',
     color: '#000000',
     marginBottom: 2,
     fontWeight: '700',
   },
   rankDescription: {
     fontSize: 12,
-    fontFamily: 'Inter-Regular',
+    fontFamily: 'Fredoka-Regular',
     color: '#666666',
   },
   rankingProgress: {
@@ -1911,7 +1911,7 @@ const styles = StyleSheet.create({
   },
   progressText: {
     fontSize: 14,
-    fontFamily: 'Inter-Medium',
+    fontFamily: 'Fredoka-Medium',
     color: '#000000',
     marginBottom: 8,
     fontWeight: '500',
@@ -1930,7 +1930,7 @@ const styles = StyleSheet.create({
   },
   nextRankText: {
     fontSize: 12,
-    fontFamily: 'Inter-Regular',
+    fontFamily: 'Fredoka-Regular',
     color: '#666666',
   },
   achievementsSection: {
@@ -1973,7 +1973,7 @@ const styles = StyleSheet.create({
   },
   achievementTitle: {
     fontSize: 12,
-    fontFamily: 'Inter-Medium',
+    fontFamily: 'Fredoka-Medium',
     color: '#000000',
     marginBottom: 8,
     textAlign: 'center',
@@ -1984,7 +1984,7 @@ const styles = StyleSheet.create({
   },
   achievementSubtitle: {
     fontSize: 13,
-    fontFamily: 'Inter-Regular',
+    fontFamily: 'Fredoka-Regular',
     color: '#CCCCCC',
     marginTop: 4,
   },
@@ -2011,7 +2011,7 @@ const styles = StyleSheet.create({
   },
   achievementProgressText: {
     fontSize: 10,
-    fontFamily: 'Inter-Medium',
+    fontFamily: 'Fredoka-Medium',
     color: '#666666',
     fontWeight: '500',
   },
@@ -2039,7 +2039,7 @@ const styles = StyleSheet.create({
   },
   modalTitle: {
     fontSize: 24,
-    fontFamily: 'Inter-Bold',
+    fontFamily: 'Fredoka-Bold',
     color: '#FFFFFF',
   },
   closeButton: {
@@ -2071,7 +2071,7 @@ const styles = StyleSheet.create({
   },
   settingsTitle: {
     fontSize: 16,
-    fontFamily: 'Inter-Medium',
+    fontFamily: 'Fredoka-Medium',
     color: '#FFFFFF',
   },
   dangerItem: {
@@ -2130,7 +2130,7 @@ const styles = StyleSheet.create({
   },
   notificationTitle: {
     fontSize: 18,
-    fontFamily: 'Inter-Bold',
+    fontFamily: 'Fredoka-Bold',
     color: '#FFFFFF',
   },
   notificationList: {
@@ -2160,20 +2160,20 @@ const styles = StyleSheet.create({
   },
   notificationItemTitle: {
     fontSize: 14,
-    fontFamily: 'Inter-Bold',
+    fontFamily: 'Fredoka-Bold',
     color: '#FFFFFF',
     marginBottom: 4,
   },
   notificationMessage: {
     fontSize: 12,
-    fontFamily: 'Inter-Regular',
+    fontFamily: 'Fredoka-Regular',
     color: '#CCCCCC',
     marginBottom: 4,
     lineHeight: 16,
   },
   notificationTime: {
     fontSize: 11,
-    fontFamily: 'Inter-Regular',
+    fontFamily: 'Fredoka-Regular',
     color: '#999999',
   },
   unreadDot: {
@@ -2187,7 +2187,7 @@ const styles = StyleSheet.create({
   },
   emptyNotificationText: {
     fontSize: 14,
-    fontFamily: 'Inter-Regular',
+    fontFamily: 'Fredoka-Regular',
     color: '#CCCCCC',
     marginTop: 16,
     textAlign: 'center',
@@ -2209,7 +2209,7 @@ const styles = StyleSheet.create({
   },
   editSectionTitle: {
     fontSize: 16,
-    fontFamily: 'Inter-Bold',
+    fontFamily: 'Fredoka-Bold',
     color: '#FFFFFF',
     marginBottom: 12,
   },
@@ -2252,7 +2252,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 16,
     fontSize: 16,
-    fontFamily: 'Inter-Regular',
+    fontFamily: 'Fredoka-Regular',
     color: '#FFFFFF',
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.1)',
@@ -2276,7 +2276,7 @@ const styles = StyleSheet.create({
   },
   saveButtonText: {
     fontSize: 16,
-    fontFamily: 'Inter-Bold',
+    fontFamily: 'Fredoka-Bold',
     color: '#000000',
   },
   currentAvatarContainer: {
@@ -2314,12 +2314,12 @@ const styles = StyleSheet.create({
   },
   uploadButtonText: {
     fontSize: 14,
-    fontFamily: 'Inter-Bold',
+    fontFamily: 'Fredoka-Bold',
     color: '#000000',
   },
   orText: {
     fontSize: 14,
-    fontFamily: 'Inter-Regular',
+    fontFamily: 'Fredoka-Regular',
     color: '#999999',
     marginBottom: 12,
     textAlign: 'center',
@@ -2335,7 +2335,7 @@ const styles = StyleSheet.create({
   },
   usernamePrefix: {
     fontSize: 16,
-    fontFamily: 'Inter-Bold',
+    fontFamily: 'Fredoka-Bold',
     color: '#FFFFFF',
     marginRight: 4,
   },
@@ -2344,7 +2344,7 @@ const styles = StyleSheet.create({
     padding: 16,
     paddingLeft: 0,
     fontSize: 16,
-    fontFamily: 'Inter-Regular',
+    fontFamily: 'Fredoka-Regular',
     color: '#FFFFFF',
     backgroundColor: 'transparent',
     borderWidth: 0,
@@ -2363,7 +2363,7 @@ const styles = StyleSheet.create({
   },
   premiumDescription: {
     fontSize: 16,
-    fontFamily: 'Inter-Regular',
+    fontFamily: 'Fredoka-Regular',
     color: '#FFFFFF',
     marginBottom: 24,
     textAlign: 'center',
@@ -2392,7 +2392,7 @@ const styles = StyleSheet.create({
   },
   popularText: {
     fontSize: 10,
-    fontFamily: 'Inter-Bold',
+    fontFamily: 'Fredoka-Bold',
     color: '#000000',
     letterSpacing: 1,
   },
@@ -2419,13 +2419,13 @@ const styles = StyleSheet.create({
   },
   planTitle: {
     fontSize: 18,
-    fontFamily: 'Inter-Bold',
+    fontFamily: 'Fredoka-Bold',
     color: '#FFFFFF',
     marginBottom: 4,
   },
   planSubtitle: {
     fontSize: 13,
-    fontFamily: 'Inter-Regular',
+    fontFamily: 'Fredoka-Regular',
     color: '#CCCCCC',
   },
   planPriceContainer: {
@@ -2433,12 +2433,12 @@ const styles = StyleSheet.create({
   },
   planPrice: {
     fontSize: 24,
-    fontFamily: 'Inter-Bold',
+    fontFamily: 'Fredoka-Bold',
     color: '#FFFFFF',
   },
   planPeriod: {
     fontSize: 12,
-    fontFamily: 'Inter-Regular',
+    fontFamily: 'Fredoka-Regular',
     color: '#CCCCCC',
   },
   featuresContainer: {
@@ -2449,7 +2449,7 @@ const styles = StyleSheet.create({
   },
   featuresTitle: {
     fontSize: 14,
-    fontFamily: 'Inter-Bold',
+    fontFamily: 'Fredoka-Bold',
     color: '#FFFFFF',
     marginBottom: 12,
   },
@@ -2463,7 +2463,7 @@ const styles = StyleSheet.create({
   },
   featureText: {
     fontSize: 14,
-    fontFamily: 'Inter-Regular',
+    fontFamily: 'Fredoka-Regular',
     color: '#CCCCCC',
   },
 });
