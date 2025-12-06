@@ -1,7 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Modal, Alert, Dimensions, Image, Animated, TextInput, Linking, ActivityIndicator } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { BlurView } from 'expo-blur';
 import * as ImagePicker from 'expo-image-picker';
 import { 
   Bell, 
@@ -786,10 +785,9 @@ export default function ProfileScreen() {
             style={styles.headerBackground}
             resizeMode="cover"
           />
-          <BlurView intensity={10} style={styles.headerBlurOverlay} pointerEvents="none" />
           <View style={styles.headerContent}>
             <View style={styles.headerTop}>
-              <Text style={[styles.headerTitle, dynamicStyles.headerTitle]}>Profile</Text>
+              <Text style={styles.headerTitle}>Profile</Text>
               <View style={styles.headerActions}>
                 <TouchableOpacity 
                   style={[styles.headerButton, dynamicStyles.headerButton]}
@@ -1474,14 +1472,6 @@ const styles = StyleSheet.create({
     bottom: 0,
     width: '100%',
     height: '100%',
-  },
-  headerBlurOverlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.6)',
   },
   headerContent: {
     paddingTop: 60,

@@ -22,9 +22,9 @@ import { Mic, StopCircle, Volume2, VolumeX, Zap, ChevronLeft, MicOff, Sparkles, 
 import * as Animatable from 'react-native-animatable';
 import { elevenLabsVoiceService } from '../services/googleVoiceService';
 import { aiService } from '../services/aiService';
-import { WebView } from 'react-native-webview';
 import { streakService } from '../services/streakService';
 import { brainBoostHistoryService } from '../services/brainBoostHistoryService';
+import LottieView from 'lottie-react-native';
 
 // Mode types for the session
 type SessionMode = 'learning' | 'teaching' | 'quiz';
@@ -1883,7 +1883,7 @@ Language: Respond in ${currentLanguage === 'ms' ? 'Bahasa Melayu' : 'English'}`;
             <ChevronLeft size={24} color="#FFFFFF" />
           </TouchableOpacity>
           <View style={styles.headerTitleContainer}>
-            <Text style={styles.headerTitle}>🧠 Daily Brain Boost</Text>
+            <Text style={styles.headerTitle}>Daily Brain Boost</Text>
             <Text style={styles.headerSubject}>{getSubjectDisplayName().icon} {getSubjectDisplayName().name}</Text>
           </View>
           <View style={styles.headerRight}>
@@ -1958,89 +1958,28 @@ Language: Respond in ${currentLanguage === 'ms' ? 'Bahasa Melayu' : 'English'}`;
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
           keyboardVerticalOffset={100}
         >
-            {/* AI Avatar - 3D Spline Brain */}
+            {/* AI Avatar - Lottie Animation */}
             <Animatable.View animation="fadeIn" style={styles.aiAvatarContainer}>
-              {/* Spline 3D Brain - Circle */}
-              <View style={styles.splineContainer}>
-                <WebView
-                  source={{
-                    html: `
-                      <!DOCTYPE html>
-                      <html>
-                      <head>
-                        <meta charset="utf-8">
-                        <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-                        <style>
-                          * { margin: 0; padding: 0; box-sizing: border-box; }
-                          html, body { width: 100%; height: 100%; background: transparent; overflow: hidden; }
-                          spline-viewer { width: 100%; height: 100%; background: transparent; display: block; }
-                          
-                          /* Hide Spline watermark */
-                          #logo, .logo, [class*="logo"], [id*="logo"],
-                          a[href*="spline"], a[target="_blank"],
-                          div[style*="position: absolute"][style*="bottom"],
-                          div[style*="position: fixed"][style*="bottom"] {
-                            display: none !important;
-                            opacity: 0 !important;
-                            visibility: hidden !important;
-                            pointer-events: none !important;
-                          }
-                        </style>
-                      </head>
-                      <body>
-                        <script type="module" src="https://unpkg.com/@splinetool/viewer@1.10.57/build/spline-viewer.js"></script>
-                        <spline-viewer url="https://prod.spline.design/0DRfJFSAhCeNIQT3/scene.splinecode"></spline-viewer>
-                        
-                        <script>
-                          // Remove watermark after load
-                          window.addEventListener('load', function() {
-                            setTimeout(function() {
-                              const viewer = document.querySelector('spline-viewer');
-                              if (viewer && viewer.shadowRoot) {
-                                const style = document.createElement('style');
-                                style.textContent = \`
-                                  #logo, .logo, [class*="logo"], [id*="logo"],
-                                  a, a[href*="spline"],
-                                  div[style*="position: absolute"][style*="bottom"],
-                                  div[style*="position: fixed"][style*="bottom"] {
-                                    display: none !important;
-                                    opacity: 0 !important;
-                                    visibility: hidden !important;
-                                  }
-                                \`;
-                                try {
-                                  viewer.shadowRoot.appendChild(style);
-                                } catch(e) {
-                                  console.log('Could not hide watermark:', e);
-                                }
-                              }
-                            }, 500);
-                          });
-                        </script>
-                      </body>
-                      </html>
-                    `
+              {/* Lottie Animation */}
+              <View style={styles.lottieContainer}>
+                <LottieView
+                  ref={lottieRef}
+                  source={require('../assets/images/animation (2).json')}
+                  autoPlay={true}
+                  loop={true}
+                  style={styles.lottieView}
+                  resizeMode="contain"
+                  speed={1}
+                  hardwareAccelerationAndroid={true}
+                  renderMode="SOFTWARE"
+                  onAnimationFailure={(error) => {
+                    console.log('Lottie animation error:', error);
                   }}
-                  style={styles.splineWebView}
-                  androidLayerType="hardware"
-                  cacheEnabled={true}
-                  cacheMode="LOAD_CACHE_ELSE_NETWORK"
-                  onMemoryWarning={() => console.log('Spline WebView memory warning')}
-                  javaScriptEnabled={true}
-                  domStorageEnabled={true}
-                  startInLoadingState={false}
-                  scalesPageToFit={false}
-                  backgroundColor="transparent"
-                  allowsInlineMediaPlayback={true}
-                  mediaPlaybackRequiresUserAction={false}
-                  mixedContentMode="compatibility"
-                  renderToHardwareTextureAndroid={true}
-                  androidHardwareAccelerationDisabled={false}
-                  originWhitelist={['*']}
-                  onLoadStart={() => console.log('Spline loading...')}
-                  onLoadEnd={() => console.log('Spline loaded!')}
-                  onError={(syntheticEvent) => {
-                    console.log('Spline error:', syntheticEvent.nativeEvent);
+                  onAnimationLoaded={() => {
+                    console.log('Lottie animation loaded');
+                    if (lottieRef.current) {
+                      lottieRef.current.play();
+                    }
                   }}
                 />
               </View>
@@ -2285,7 +2224,7 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     fontSize: isSmallDevice ? 18 : isTablet ? 24 : 20,
-    fontFamily: 'SpaceGrotesk-Bold',
+    fontFamily: 'Fredoka-SemiBold',
     color: '#FFFFFF',
     textAlign: 'center',
   },
@@ -2375,17 +2314,16 @@ const styles = StyleSheet.create({
     marginVertical: isSmallDevice ? 15 : 20,
     position: 'relative',
   },
-  splineContainer: {
+  lottieContainer: {
     width: isSmallDevice ? 120 : isTablet ? 180 : 150,
     height: isSmallDevice ? 120 : isTablet ? 180 : 150,
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: 'transparent',
   },
-  splineWebView: {
+  lottieView: {
     width: isSmallDevice ? 120 : isTablet ? 180 : 150,
     height: isSmallDevice ? 120 : isTablet ? 180 : 150,
-    backgroundColor: 'transparent',
   },
   aiAvatarCircle: {
     width: 120,

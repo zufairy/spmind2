@@ -375,40 +375,53 @@ export default function HomeScreen() {
     return () => clearInterval(typewriterInterval);
   }, [fullText]);
 
-  // Preload all images on component mount for instant category switching
+  // Preload images in background without blocking UI
   useEffect(() => {
+    // Show page immediately - don't wait for images
+    setImagesLoaded(true);
+    
+    // Preload images in background for instant category switching
     const preloadImages = async () => {
       try {
-        console.log('🖼️ Prefetching images for instant switching...');
+        console.log('🖼️ Prefetching images in background...');
+        
+        // Use Promise.allSettled with timeout to prevent hanging
+        const timeoutPromise = new Promise((resolve) => {
+          setTimeout(() => {
+            console.log('⏱️ Image preload timeout - continuing anyway');
+            resolve(null);
+          }, 2000); // 2 second timeout
+        });
         
         // Preload all subject images with individual error handling
         const imagePromises = [
           // Jom Tanya images - use resolveAssetSource for safety
-          Image.prefetch(Image.resolveAssetSource(require('../../assets/images/jomTanyaBI.png')).uri),
-          Image.prefetch(Image.resolveAssetSource(require('../../assets/images/jomTanyaBM.png')).uri),
-          Image.prefetch(Image.resolveAssetSource(require('../../assets/images/jomTanyaMath.png')).uri),
-          Image.prefetch(Image.resolveAssetSource(require('../../assets/images/jomTanyaSains.png')).uri),
-          Image.prefetch(Image.resolveAssetSource(require('../../assets/images/jomTanyaSejarah.png')).uri),
+          Image.prefetch(Image.resolveAssetSource(require('../../assets/images/jomTanyaBI.png')).uri).catch(() => null),
+          Image.prefetch(Image.resolveAssetSource(require('../../assets/images/jomTanyaBM.png')).uri).catch(() => null),
+          Image.prefetch(Image.resolveAssetSource(require('../../assets/images/jomTanyaMath.png')).uri).catch(() => null),
+          Image.prefetch(Image.resolveAssetSource(require('../../assets/images/jomTanyaSains.png')).uri).catch(() => null),
+          Image.prefetch(Image.resolveAssetSource(require('../../assets/images/jomTanyaSejarah.png')).uri).catch(() => null),
           // Memory Stretch images
-          Image.prefetch(Image.resolveAssetSource(require('../../assets/images/EnglishRecap.png')).uri),
-          Image.prefetch(Image.resolveAssetSource(require('../../assets/images/BMRecap.png')).uri),
-          Image.prefetch(Image.resolveAssetSource(require('../../assets/images/MathRecap.png')).uri),
-          Image.prefetch(Image.resolveAssetSource(require('../../assets/images/ScienceRecap.png')).uri),
-          Image.prefetch(Image.resolveAssetSource(require('../../assets/images/SejarahRecap.png')).uri),
-        ].map(promise => promise.catch(err => {
-          console.warn('Failed to prefetch image:', err);
-          return null;
-        }));
+          Image.prefetch(Image.resolveAssetSource(require('../../assets/images/EnglishRecap.png')).uri).catch(() => null),
+          Image.prefetch(Image.resolveAssetSource(require('../../assets/images/BMRecap.png')).uri).catch(() => null),
+          Image.prefetch(Image.resolveAssetSource(require('../../assets/images/MathRecap.png')).uri).catch(() => null),
+          Image.prefetch(Image.resolveAssetSource(require('../../assets/images/ScienceRecap.png')).uri).catch(() => null),
+          Image.prefetch(Image.resolveAssetSource(require('../../assets/images/SejarahRecap.png')).uri).catch(() => null),
+        ];
         
-        await Promise.allSettled(imagePromises);
-        console.log('✅ Images prefetched successfully');
-        setImagesLoaded(true);
+        // Race between image loading and timeout
+        await Promise.race([
+          Promise.allSettled(imagePromises),
+          timeoutPromise
+        ]);
+        
+        console.log('✅ Images prefetched (or timeout reached)');
       } catch (error) {
-        console.log('Image preloading error:', error);
-        setImagesLoaded(true); // Continue anyway
+        console.log('Image preloading error (non-blocking):', error);
       }
     };
 
+    // Start preloading in background without blocking
     preloadImages();
   }, []);
 

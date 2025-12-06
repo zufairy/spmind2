@@ -363,11 +363,7 @@ export default function NotesPage() {
         >
           <BlurView intensity={20} style={StyleSheet.absoluteFill} />
         </Animated.View>
-        <Animated.View style={[styles.headerContent, { paddingTop: scrollY.interpolate({
-          inputRange: [0, 100],
-          outputRange: [insets.top + 4, insets.top + 2],
-          extrapolate: 'clamp',
-        }) }]}>
+        <Animated.View style={styles.headerContent}>
           <View style={styles.headerCenter}>
             <Animated.Text style={[styles.headerTitle, { fontSize: titleFontSize }]}>Notetaker</Animated.Text>
           </View>
@@ -953,11 +949,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 20,
-    paddingBottom: 8,
+    paddingTop: 50,
+    paddingBottom: 20,
     position: 'relative',
     zIndex: 200,
     pointerEvents: 'box-none',
-    height: '100%',
   },
   headerCenter: {
     flex: 1,
