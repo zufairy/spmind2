@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   View,
   Text,
@@ -10,6 +10,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   Image,
+  Animated,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Eye, EyeOff, Mail, Lock, ArrowLeft } from 'lucide-react-native';
@@ -28,6 +29,35 @@ export default function LoginScreen() {
   });
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  
+  // Animation values
+  const logoAnim = useRef(new Animated.Value(0)).current;
+  const titleAnim = useRef(new Animated.Value(0)).current;
+  const formAnim = useRef(new Animated.Value(0)).current;
+  
+  // Slide up animations on mount
+  useEffect(() => {
+    Animated.stagger(100, [
+      Animated.spring(logoAnim, {
+        toValue: 1,
+        tension: 50,
+        friction: 7,
+        useNativeDriver: true,
+      }),
+      Animated.spring(titleAnim, {
+        toValue: 1,
+        tension: 50,
+        friction: 7,
+        useNativeDriver: true,
+      }),
+      Animated.spring(formAnim, {
+        toValue: 1,
+        tension: 50,
+        friction: 7,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, []);
 
   const handleGoogleLogin = async () => {
     setLoading(true);
@@ -70,7 +100,7 @@ export default function LoginScreen() {
       const { user, error } = await login(credentials.email, credentials.password);
       
       if (error) {
-        const errorMessage = typeof error === 'string' ? error : error.message || 'Login failed. Please try again.';
+        const errorMessage = typeof error === 'string' ? error : (error as any)?.message || 'Login failed. Please try again.';
         console.error('❌ LoginScreen: Login failed:', errorMessage);
         
         // Show user-friendly error message
@@ -112,24 +142,63 @@ export default function LoginScreen() {
           nestedScrollEnabled={true}
         >
           {/* Hero Image */}
-          <View style={styles.heroSection}>
+          <Animated.View 
+            style={[
+              styles.heroSection,
+              {
+                opacity: logoAnim,
+                transform: [{
+                  translateY: logoAnim.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [-30, 0],
+                  }),
+                }],
+              }
+            ]}
+          >
             <Image 
-              source={require('../../assets/images/logow.png')}
+              source={require('../../assets/images/Logo_Long.png')}
               style={styles.heroImage}
               resizeMode="contain"
             />
-          </View>
+          </Animated.View>
 
           {/* Welcome Text */}
-          <View style={styles.welcomeSection}>
+          <Animated.View 
+            style={[
+              styles.welcomeSection,
+              {
+                opacity: titleAnim,
+                transform: [{
+                  translateY: titleAnim.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [-20, 0],
+                  }),
+                }],
+              }
+            ]}
+          >
             <Text style={styles.welcomeTitle}>Let's Get Started</Text>
             <Text style={styles.welcomeSubtitle}>
               #1 AI Powered Tutor
             </Text>
-          </View>
+          </Animated.View>
 
           {/* Login Form */}
-          <View style={styles.formContainer}>
+          <Animated.View 
+            style={[
+              styles.formContainer,
+              {
+                opacity: formAnim,
+                transform: [{
+                  translateY: formAnim.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [-20, 0],
+                  }),
+                }],
+              }
+            ]}
+          >
             <View style={styles.inputContainer}>
               <Mail size={20} color="rgba(255, 255, 255, 0.4)" style={styles.inputIcon} />
               <TextInput
@@ -238,7 +307,7 @@ export default function LoginScreen() {
                 Don't have an account? <Text style={styles.signUpText}>Sign Up</Text>
               </Text>
             </TouchableOpacity>
-          </View>
+          </Animated.View>
         </ScrollView>
       </View>
     </KeyboardAvoidingView>
@@ -263,12 +332,12 @@ const styles = StyleSheet.create({
   },
   heroSection: {
     alignItems: 'center',
-    marginBottom: 0,
+    marginBottom: 48,
   },
   heroImage: {
-    width: 200,
-    height: 200,
-    marginBottom: -40,
+    width: 180,
+    height: 60,
+    marginBottom: 0,
   },
   welcomeSection: {
     alignItems: 'center',

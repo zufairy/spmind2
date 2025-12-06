@@ -1,6 +1,5 @@
 import { Tabs } from 'expo-router';
-import { Search, FileText, Gamepad2, User, Home } from 'lucide-react-native';
-import { StyleSheet, View } from 'react-native';
+import { StyleSheet, View, Image } from 'react-native';
 import { ProtectedRoute } from '../../components/ProtectedRoute';
 import { useTheme } from '../../contexts/ThemeContext';
 
@@ -48,13 +47,12 @@ export default function TabLayout() {
           title: 'Solver',
           animation: 'fade',
           animationDuration: 300,
-          tabBarIcon: ({ size, color, focused }) => (
-            <View style={styles.iconWrapper}>
-              <Search 
-                size={28} 
-                color={color} 
-                strokeWidth={focused ? 2.5 : 2}
-                style={focused ? styles.iconGlow : undefined}
+          tabBarIcon: ({ focused }) => (
+            <View style={[styles.iconWrapper, focused && styles.activeContainer]}>
+              <Image 
+                source={require('../../assets/images/menu/search.png')}
+                style={[styles.tabIcon, focused && styles.activeIcon]}
+                resizeMode="contain"
               />
             </View>
           ),
@@ -66,13 +64,12 @@ export default function TabLayout() {
           title: 'Notes',
           animation: 'fade',
           animationDuration: 300,
-          tabBarIcon: ({ size, color, focused }) => (
-            <View style={styles.iconWrapper}>
-              <FileText 
-                size={28} 
-                color={color} 
-                strokeWidth={focused ? 2.5 : 2}
-                style={focused ? styles.iconGlow : undefined}
+          tabBarIcon: ({ focused }) => (
+            <View style={[styles.iconWrapper, focused && styles.activeContainer]}>
+              <Image 
+                source={require('../../assets/images/menu/notes (1).png')}
+                style={[styles.tabIcon, focused && styles.activeIcon]}
+                resizeMode="contain"
               />
             </View>
           ),
@@ -84,13 +81,12 @@ export default function TabLayout() {
           title: 'Home',
           animation: 'fade',
           animationDuration: 300,
-          tabBarIcon: ({ size, color, focused }) => (
-            <View style={styles.iconWrapper}>
-              <Home 
-                size={28} 
-                color={color} 
-                strokeWidth={focused ? 2.5 : 2}
-                style={focused ? styles.iconGlow : undefined}
+          tabBarIcon: ({ focused }) => (
+            <View style={[styles.iconWrapper, focused && styles.activeContainer]}>
+              <Image 
+                source={require('../../assets/images/menu/home (1).png')}
+                style={[styles.tabIcon, focused && styles.activeIcon]}
+                resizeMode="contain"
               />
             </View>
           ),
@@ -102,13 +98,12 @@ export default function TabLayout() {
           title: 'Community',
           animation: 'fade',
           animationDuration: 300,
-          tabBarIcon: ({ size, color, focused }) => (
-            <View style={styles.iconWrapper}>
-              <Gamepad2 
-                size={28} 
-                color={color} 
-                strokeWidth={focused ? 2.5 : 2}
-                style={focused ? styles.iconGlow : undefined}
+          tabBarIcon: ({ focused }) => (
+            <View style={[styles.iconWrapper, focused && styles.activeContainer]}>
+              <Image 
+                source={require('../../assets/images/menu/game (2).png')}
+                style={[styles.tabIcon, focused && styles.activeIcon]}
+                resizeMode="contain"
               />
             </View>
           ),
@@ -120,13 +115,12 @@ export default function TabLayout() {
           title: 'Profile',
           animation: 'fade',
           animationDuration: 300,
-          tabBarIcon: ({ size, color, focused }) => (
-            <View style={styles.iconWrapper}>
-              <User 
-                size={28} 
-                color={color} 
-                strokeWidth={focused ? 2.5 : 2}
-                style={focused ? styles.iconGlow : undefined}
+          tabBarIcon: ({ focused }) => (
+            <View style={[styles.iconWrapper, focused && styles.activeContainer]}>
+              <Image 
+                source={require('../../assets/images/menu/tiger.png')}
+                style={[styles.tabIcon, focused && styles.activeIcon]}
+                resizeMode="contain"
               />
             </View>
           ),
@@ -178,14 +172,23 @@ const styles = StyleSheet.create({
   iconWrapper: {
     alignItems: 'center',
     justifyContent: 'center',
-    width: 40,
-    height: 40,
+    width: 48,
+    height: 48,
+    borderRadius: 12,
+    padding: 8,
   },
-  iconGlow: {
-    shadowColor: '#22C55E',
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.8,
-    shadowRadius: 8,
-    elevation: 8,
+  activeContainer: {
+    backgroundColor: '#FFF4E6',
+    borderWidth: 2,
+    borderColor: '#FF9500',
+    borderRadius: 12,
+  },
+  tabIcon: {
+    width: 32,
+    height: 32,
+    opacity: 0.6,
+  },
+  activeIcon: {
+    opacity: 1,
   },
 });

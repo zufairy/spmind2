@@ -288,7 +288,7 @@ export default function NotesPage() {
   // Header animation styles based on scroll
   const headerHeight = scrollY.interpolate({
     inputRange: [0, 100],
-    outputRange: [80 + insets.top, 60 + insets.top],
+    outputRange: [55 + insets.top, 48 + insets.top],
     extrapolate: 'clamp',
   });
 
@@ -365,7 +365,7 @@ export default function NotesPage() {
         </Animated.View>
         <Animated.View style={[styles.headerContent, { paddingTop: scrollY.interpolate({
           inputRange: [0, 100],
-          outputRange: [insets.top + 20, insets.top + 10],
+          outputRange: [insets.top + 4, insets.top + 2],
           extrapolate: 'clamp',
         }) }]}>
           <View style={styles.headerCenter}>
@@ -419,7 +419,7 @@ export default function NotesPage() {
             </TouchableOpacity>
 
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.categoryTabs}>
-            {['All', 'work', 'Personal', 'Fitness'].map((category) => (
+            {['All', 'Studies', 'Work', 'Lifestyle'].map((category) => (
               <TouchableOpacity
                 key={category}
                 style={[
@@ -466,6 +466,11 @@ export default function NotesPage() {
              </View>
            ) : filteredStickyNotes && Array.isArray(filteredStickyNotes) && filteredStickyNotes.length === 0 ? (
              <View style={styles.emptyContainer}>
+               <Image 
+                 source={require('../../assets/cryv2.png')}
+                 style={styles.emptyImage}
+                 resizeMode="contain"
+               />
                <Text style={[styles.emptyTitle, dynamicStyles.emptyTitle]}>
                  {searchQuery.trim() ? 'No notes found' : 'No notes yet'}
                </Text>
@@ -890,6 +895,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     paddingVertical: 40,
+  },
+  emptyImage: {
+    width: 120,
+    height: 120,
+    marginBottom: 16,
   },
   emptyTitle: {
     fontSize: 20,

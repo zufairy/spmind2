@@ -15,12 +15,11 @@ import {
   Alert,
 } from 'react-native';
 import { ArrowRight, Bell, X, Trophy, Award, Zap, MessageSquare } from 'lucide-react-native';
-import { WebView } from 'react-native-webview';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { useIsFocused } from '@react-navigation/native';
-import { BlurView } from 'expo-blur';
 import { useAuth } from '../../contexts/AuthContext';
+import { useTheme } from '../../contexts/ThemeContext';
 import SimpleAvatarInteraction from '../../components/SimpleAvatarInteraction';
 import AvatarSoundSystem from '../../components/AvatarSoundSystem';
 import * as Animatable from 'react-native-animatable';
@@ -28,6 +27,7 @@ import { Audio } from 'expo-av';
 import { streakService } from '../../services/streakService';
 import { supabase } from '../../services/supabase';
 import { cacheService } from '../../services/cacheService';
+import LottieView from 'lottie-react-native';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
@@ -35,6 +35,7 @@ export default function HomeScreen() {
   const [selectedCategory, setSelectedCategory] = useState('english');
   const router = useRouter();
   const { user } = useAuth();
+  const { isDark } = useTheme();
   const isFocused = useIsFocused();
   
   // Streak state
@@ -55,6 +56,7 @@ export default function HomeScreen() {
   const imageOpacity = useRef(new Animated.Value(1)).current;
   const imageScale = useRef(new Animated.Value(1)).current;
   const pageFadeAnim = useRef(new Animated.Value(0)).current;
+  const lottieRef = useRef<any>(null);
 
   // Preload all images for instant switching
   const [imagesLoaded, setImagesLoaded] = useState(false);
@@ -82,6 +84,19 @@ export default function HomeScreen() {
       useNativeDriver: true,
     }).start();
   }, []);
+
+  // Ensure Lottie animation plays when focused
+  useEffect(() => {
+    if (isFocused && lottieRef.current) {
+      // Small delay to ensure the view is mounted
+      const timer = setTimeout(() => {
+        if (lottieRef.current) {
+          lottieRef.current.play();
+        }
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [isFocused]);
 
   // Flame pulsing animation
   useEffect(() => {
@@ -555,12 +570,6 @@ export default function HomeScreen() {
       
       {/* Header */}
       <View style={styles.header}>
-        <Image 
-          source={require('../../assets/images/bg.jpg')}
-          style={styles.headerBackground}
-          resizeMode="cover"
-        />
-        <BlurView intensity={10} style={styles.headerBlurOverlay} />
         <View style={styles.headerContent}>
           <View style={styles.greetingContainer}>
             <Text style={styles.greeting}>
@@ -586,102 +595,33 @@ export default function HomeScreen() {
       >
       {/* Avatar and Text Bubble Section */}
       <View style={styles.avatarSection}>
-        {/* Spline Avatar */}
+        {/* Lottie Animation */}
         {isFocused && (
           <View style={styles.avatarContainer}>
-            <WebView
-              source={{
-              html: `
-                <!DOCTYPE html>
-                <html>
-                <head>
-                  <meta charset="utf-8">
-                  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-                  <style>
-                    * {
-                      margin: 0;
-                      padding: 0;
-                      box-sizing: border-box;
-                    }
-                    html, body {
-                      width: 100%;
-                      height: 100%;
-                      background: transparent;
-                      overflow: hidden;
-                    }
-                    spline-viewer {
-                      width: 100%;
-                      height: 100%;
-                      background: transparent;
-                      display: block;
-                    }
-                    
-                    /* Hide Spline watermark */
-                    #logo, .logo, [class*="logo"], [id*="logo"],
-                    a[href*="spline"], a[target="_blank"],
-                    div[style*="position: absolute"][style*="bottom"],
-                    div[style*="position: fixed"][style*="bottom"] {
-                      display: none !important;
-                      opacity: 0 !important;
-                      visibility: hidden !important;
-                      pointer-events: none !important;
-                    }
-                  </style>
-                </head>
-                <body>
-                  <script type="module" src="https://unpkg.com/@splinetool/viewer@1.10.57/build/spline-viewer.js"></script>
-                  <spline-viewer url="https://prod.spline.design/ZvT-Z5bOGCW9tJds/scene.splinecode"></spline-viewer>
-                  
-                  <script>
-                    // Remove watermark after load
-                    window.addEventListener('load', function() {
-                      setTimeout(function() {
-                        const viewer = document.querySelector('spline-viewer');
-                        if (viewer && viewer.shadowRoot) {
-                          const style = document.createElement('style');
-                          style.textContent = \`
-                            #logo, .logo, [class*="logo"], [id*="logo"],
-                            a, a[href*="spline"],
-                            div[style*="position: absolute"][style*="bottom"],
-                            div[style*="position: fixed"][style*="bottom"] {
-                              display: none !important;
-                              opacity: 0 !important;
-                              visibility: hidden !important;
-                            }
-                          \`;
-                          try {
-                            viewer.shadowRoot.appendChild(style);
-                          } catch(e) {
-                            console.log('Could not hide watermark:', e);
-                          }
-                        }
-                      }, 500);
-                    });
-                  </script>
-                </body>
-                </html>
-              `
-            }}
-            style={styles.splineViewer}
-            androidLayerType="hardware"
-            cacheEnabled={true}
-            cacheMode="LOAD_CACHE_ELSE_NETWORK"
-            onMemoryWarning={() => console.log('Spline WebView memory warning')}
-            javaScriptEnabled={true}
-            domStorageEnabled={true}
-            startInLoadingState={false}
-            scalesPageToFit={false}
-            backgroundColor="transparent"
-            allowsInlineMediaPlayback={true}
-            mediaPlaybackRequiresUserAction={false}
-            mixedContentMode="compatibility"
-            onLoadStart={() => {}}
-            onLoadEnd={() => {}}
-            onError={(syntheticEvent) => {
-              const { nativeEvent } = syntheticEvent;
-            }}
-          />
-        </View>
+            <LottieView
+              ref={lottieRef}
+              source={require('../../assets/animation.json')}
+              autoPlay={true}
+              loop={true}
+              style={styles.lottieView}
+              resizeMode="contain"
+              speed={1}
+              hardwareAccelerationAndroid={true}
+              renderMode="SOFTWARE"
+              onAnimationFailure={(error) => {
+                console.log('Lottie animation error:', error);
+              }}
+              onAnimationLoaded={() => {
+                console.log('Lottie animation loaded');
+                if (lottieRef.current) {
+                  lottieRef.current.play();
+                }
+              }}
+              onLayout={() => {
+                console.log('Lottie view laid out');
+              }}
+            />
+          </View>
         )}
 
         
@@ -793,6 +733,34 @@ export default function HomeScreen() {
         </Animatable.View>
       </View>
 
+      {/* Daily Brain Boost Button */}
+      <View style={styles.dailyBoostSection}>
+        <View style={styles.dailyBoost3DContainer}>
+          <TouchableOpacity 
+            style={styles.dailyBoostButton}
+            onPress={() => router.push({
+              pathname: '/daily-brain-boost',
+              params: { subject: selectedCategory }
+            })}
+            activeOpacity={0.9}
+          >
+            <View style={styles.dailyBoostInner}>
+              <View style={styles.dailyBoostContent}>
+                <Text style={styles.dailyBoostTextTop}>Daily</Text>
+                <Text style={styles.dailyBoostTextBottom}>Brain Boost</Text>
+              </View>
+            </View>
+            <View style={styles.dailyBoostImageContainer}>
+              <Image 
+                source={require('../../assets/dailyboost.png')}
+                style={styles.dailyBoostBackground}
+                resizeMode="contain"
+              />
+            </View>
+          </TouchableOpacity>
+        </View>
+      </View>
+
       {/* Fixed Complete Section */}
       <View style={styles.fixedCompleteSection}>
         <View style={styles.fixedCompleteContainer}>
@@ -871,29 +839,6 @@ export default function HomeScreen() {
               ))}
             </View>
           </View>
-
-          {/* Daily Brain Boost Image - Now at the top */}
-          <TouchableOpacity 
-            style={styles.fullScreenImageContainer}
-            onPress={() => router.push({
-              pathname: '/daily-brain-boost',
-              params: { subject: selectedCategory }
-            })}
-          >
-            <Animated.View style={[
-              styles.fullScreenImageWrapper,
-              {
-                opacity: imageOpacity,
-                transform: [{ scale: imageScale }]
-              }
-            ]}>
-              <Image 
-                source={require('../../assets/images/dailybrainboost.png')}
-                style={styles.fullScreenImage}
-                resizeMode="contain"
-              />
-            </Animated.View>
-          </TouchableOpacity>
 
           {/* Content Cards */}
           <View style={styles.cardsContainer}>
@@ -1114,25 +1059,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     zIndex: 1000,
     elevation: 1000,
-  },
-  headerBackground: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    width: '100%',
-    height: '100%',
-    zIndex: 1,
-  },
-  headerBlurOverlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.6)',
-    zIndex: 2,
+    backgroundColor: '#000000',
   },
   headerContent: {
     flexDirection: 'row',
@@ -1142,7 +1069,6 @@ const styles = StyleSheet.create({
     paddingTop: 50,
     paddingBottom: 20,
     position: 'relative',
-    zIndex: 3,
   },
   greetingContainer: {
     flex: 1,
@@ -1151,14 +1077,14 @@ const styles = StyleSheet.create({
   greeting: {
     fontSize: 20,
     color: '#FFFFFF',
-    textShadowColor: 'rgba(0, 0, 0, 0.5)',
-    textShadowOffset: { width: 0, height: 2 },
-    textShadowRadius: 4,
+    fontFamily: 'Fredoka-Regular',
   },
   greetingNormal: {
+    fontFamily: 'Fredoka-Regular',
     fontWeight: '400',
   },
   greetingBold: {
+    fontFamily: 'Fredoka-Bold',
     fontWeight: '700',
   },
   notificationContainer: {
@@ -1254,8 +1180,9 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 4,
   },
-  splineViewer: {
-    flex: 1,
+  lottieView: {
+    width: '100%',
+    height: '100%',
     backgroundColor: 'transparent',
   },
   contentContainer: {
@@ -1841,5 +1768,69 @@ const styles = StyleSheet.create({
     color: '#CCCCCC',
     marginTop: 16,
     textAlign: 'center',
+  },
+  dailyBoostSection: {
+    paddingHorizontal: 20,
+    marginTop: 12,
+    marginBottom: 8,
+  },
+  dailyBoost3DContainer: {
+    borderRadius: 20,
+    backgroundColor: '#D66B2A',
+    paddingBottom: 4,
+    paddingRight: 4,
+  },
+  dailyBoostButton: {
+    height: 120,
+    borderRadius: 18,
+    overflow: 'hidden',
+    position: 'relative',
+    backgroundColor: '#FF8C42',
+    borderWidth: 0,
+  },
+  dailyBoostInner: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingTop: 12,
+    paddingBottom: 0,
+    position: 'relative',
+    zIndex: 2,
+  },
+  dailyBoostContent: {
+    flex: 1,
+    zIndex: 3,
+    marginTop: 0,
+  },
+  dailyBoostTextTop: {
+    fontSize: 22,
+    fontWeight: '600',
+    fontFamily: 'Fredoka-SemiBold',
+    color: '#FFFFFF',
+    marginBottom: 4,
+    letterSpacing: 0.5,
+  },
+  dailyBoostTextBottom: {
+    fontSize: 26,
+    fontWeight: '700',
+    fontFamily: 'Fredoka-Bold',
+    color: '#FFFFFF',
+    letterSpacing: 0.5,
+  },
+  dailyBoostImageContainer: {
+    position: 'absolute',
+    right: 0,
+    bottom: 0,
+    width: 160,
+    height: 160,
+    zIndex: 1,
+    justifyContent: 'flex-end',
+    alignItems: 'flex-end',
+  },
+  dailyBoostBackground: {
+    width: 160,
+    height: 160,
   },
 });

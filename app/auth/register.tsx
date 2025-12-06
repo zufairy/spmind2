@@ -58,6 +58,9 @@ export default function RegisterScreen() {
   const slideAnim = useRef(new Animated.Value(0)).current;
   const loginTextOpacity = useRef(new Animated.Value(1)).current;
   const modalScale = useRef(new Animated.Value(0)).current;
+  const logoAnim = useRef(new Animated.Value(0)).current;
+  const titleAnim = useRef(new Animated.Value(0)).current;
+  const formAnim = useRef(new Animated.Value(0)).current;
   const confettiAnims = useRef(
     Array.from({ length: 50 }, () => ({
       x: new Animated.Value(0),
@@ -262,6 +265,31 @@ export default function RegisterScreen() {
       if (usernameTimeout.current) clearTimeout(usernameTimeout.current);
       if (emailTimeout.current) clearTimeout(emailTimeout.current);
     };
+  }, []);
+
+  // Slide up animations on mount
+  useEffect(() => {
+    // Staggered slide-up animations
+    Animated.stagger(100, [
+      Animated.spring(logoAnim, {
+        toValue: 1,
+        tension: 50,
+        friction: 7,
+        useNativeDriver: true,
+      }),
+      Animated.spring(titleAnim, {
+        toValue: 1,
+        tension: 50,
+        friction: 7,
+        useNativeDriver: true,
+      }),
+      Animated.spring(formAnim, {
+        toValue: 1,
+        tension: 50,
+        friction: 7,
+        useNativeDriver: true,
+      }),
+    ]).start();
   }, []);
 
   const handleGoogleSignup = async () => {
@@ -521,28 +549,54 @@ export default function RegisterScreen() {
         <StarryBackground />
         <ScrollView contentContainerStyle={styles.scrollContent}>
           {/* Logo */}
-          <View style={styles.logoSection}>
+          <Animated.View 
+            style={[
+              styles.logoSection,
+              {
+                opacity: logoAnim,
+                transform: [{
+                  translateY: logoAnim.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [-30, 0],
+                  }),
+                }],
+              }
+            ]}
+          >
             <Image 
-              source={require('../../assets/images/logow.png')}
+              source={require('../../assets/images/Logo_Long.png')}
               style={styles.logoImage}
               resizeMode="contain"
             />
-          </View>
+          </Animated.View>
 
           {/* Welcome Text */}
-          <View style={styles.welcomeSection}>
+          <Animated.View 
+            style={[
+              styles.welcomeSection,
+              {
+                opacity: titleAnim,
+                transform: [{
+                  translateY: titleAnim.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [-20, 0],
+                  }),
+                }],
+              }
+            ]}
+          >
             <Text style={styles.welcomeTitle}>Become a Genius</Text>
             <Text style={styles.welcomeSubtitle}>
               {step === 1 ? 'Start your learning journey today' : 'Complete your profile'}
             </Text>
-          </View>
+          </Animated.View>
 
           {/* Form */}
           <Animated.View 
             style={[
               styles.formContainer,
               {
-                opacity: fadeAnim,
+                opacity: Animated.multiply(fadeAnim, formAnim),
                 transform: [{ translateY: slideAnim }],
               }
             ]}
@@ -828,11 +882,11 @@ const styles = StyleSheet.create({
   },
   logoSection: {
     alignItems: 'center',
-    marginBottom: 24,
+    marginBottom: 56,
   },
   logoImage: {
-    width: 120,
-    height: 120,
+    width: 180,
+    height: 60,
   },
   welcomeSection: {
     alignItems: 'center',

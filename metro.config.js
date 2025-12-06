@@ -10,6 +10,7 @@ config.resolver.alias = {
 };
 
 // Exclude problematic packages that use import.meta from web builds
+<<<<<<< Updated upstream
 // Handle blockList which can be undefined, a RegExp, or an array
 const existingBlockList = config.resolver.blockList;
 const blockListArray = existingBlockList
@@ -20,6 +21,13 @@ const blockListArray = existingBlockList
 
 config.resolver.blockList = [
   ...blockListArray,
+=======
+const existingBlockList = Array.isArray(config.resolver.blockList) 
+  ? config.resolver.blockList 
+  : [];
+config.resolver.blockList = [
+  ...existingBlockList,
+>>>>>>> Stashed changes
   // Block debugger-frontend which uses import.meta and causes web build issues
   /node_modules\/@react-native\/debugger-frontend\/.*/,
 ];
