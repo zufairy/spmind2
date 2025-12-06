@@ -412,83 +412,73 @@ export default function OnboardingScreen() {
   const handleModeSelection = async (selectedMode: 'chat' | 'voice') => {
     console.log('🎯 MODE SELECTED:', selectedMode);
     
-    // Show loading state
-    setIsModeLoading(true);
+    // Set the mode directly - no loading screen
+    setStep(selectedMode);
     
-    // Show loading step first
-    setStep('loading');
-    
-    // Small delay to show loading
-    setTimeout(async () => {
-      // Set the mode
-      setStep(selectedMode);
-      setIsModeLoading(false);
+    // Initialize the selected mode
+    if (selectedMode === 'chat') {
+      console.log('💬 CHAT MODE - Starting natural conversation');
+      console.log('💬 Current userName:', userName);
+      console.log('💬 Selected language:', selectedLanguage);
       
-      // Initialize the selected mode
-      if (selectedMode === 'chat') {
-        console.log('💬 CHAT MODE - Starting natural conversation');
-        console.log('💬 Current userName:', userName);
-        console.log('💬 Selected language:', selectedLanguage);
-        
-        // Ensure we have a user name
-        const displayName = userName || 'there';
-        console.log('💬 Display name:', displayName);
-        
-        // Use the first onboarding question in the selected language
-        const firstQuestion = getLocalizedQuestion(onboardingSteps[0], selectedLanguage);
-        const greeting = selectedLanguage === 'Bahasa Melayu' 
-          ? `Hai ${displayName}! Saya Tigeria, AI tutor awak! 👋 ${firstQuestion}`
-          : `Hi ${displayName}! I'm Tigeria, your AI study buddy! 👋 ${firstQuestion}`;
-        
-        const initialMessage: Message = {
-          type: 'ai',
-          message: greeting,
-          timestamp: new Date(),
-          hasAudio: true,
-        };
-        
-        // Display message immediately and force re-render
-        setConversationHistory([initialMessage]);
-        setCurrentStep(0); // Reset step for chat mode
-        
-        console.log('💬 Chat mode: Natural conversation started with message:', greeting);
-        
-        // Force scroll to bottom after a short delay
-        setTimeout(() => {
-          if (scrollViewRef.current) {
-            scrollViewRef.current.scrollToEnd({ animated: true });
-          }
-        }, 100);
-      } else if (selectedMode === 'voice') {
-        console.log('🎤 VOICE MODE - Starting voice onboarding');
-        
-        // Set language for voice service
-        elevenLabsVoiceService.setLanguage(selectedLanguage === 'Bahasa Melayu' ? 'ms' : 'en');
-        
-        // Set up voice mode conversation
-        const displayName = userName || 'there';
-        const firstQuestion = getLocalizedQuestion(onboardingSteps[0], selectedLanguage);
-        const greeting = selectedLanguage === 'Bahasa Melayu' 
-          ? `Hai ${displayName}! Saya Tigeria, kawan AI awak! 👋 ${firstQuestion}`
-          : `Hi ${displayName}! I'm Tigeria, your AI buddy! 👋 ${firstQuestion}`;
-        
-        const initialMessage: Message = {
-          type: 'ai',
-          message: greeting,
-          timestamp: new Date(),
-          hasAudio: true,
-        };
-        
-        // Set up conversation
-        setConversationHistory([initialMessage]);
-        setCurrentStep(0);
-        
-        console.log('🎤 Voice mode: Starting with question:', greeting);
-        
-        // Generate speech for the first question
-        await generateAndPlaySpeech(greeting);
-      }
-    }, 800);
+      // Ensure we have a user name
+      const displayName = userName || 'there';
+      console.log('💬 Display name:', displayName);
+      
+      // Use the first onboarding question in the selected language
+      const firstQuestion = getLocalizedQuestion(onboardingSteps[0], selectedLanguage);
+      const greeting = selectedLanguage === 'Bahasa Melayu' 
+        ? `Hai ${displayName}! Saya Tigeria, AI tutor awak! 👋 ${firstQuestion}`
+        : `Hi ${displayName}! I'm Tigeria, your AI study buddy! 👋 ${firstQuestion}`;
+      
+      const initialMessage: Message = {
+        type: 'ai',
+        message: greeting,
+        timestamp: new Date(),
+        hasAudio: true,
+      };
+      
+      // Display message immediately and force re-render
+      setConversationHistory([initialMessage]);
+      setCurrentStep(0); // Reset step for chat mode
+      
+      console.log('💬 Chat mode: Natural conversation started with message:', greeting);
+      
+      // Force scroll to bottom after a short delay
+      setTimeout(() => {
+        if (scrollViewRef.current) {
+          scrollViewRef.current.scrollToEnd({ animated: true });
+        }
+      }, 100);
+    } else if (selectedMode === 'voice') {
+      console.log('🎤 VOICE MODE - Starting voice onboarding');
+      
+      // Set language for voice service
+      elevenLabsVoiceService.setLanguage(selectedLanguage === 'Bahasa Melayu' ? 'ms' : 'en');
+      
+      // Set up voice mode conversation
+      const displayName = userName || 'there';
+      const firstQuestion = getLocalizedQuestion(onboardingSteps[0], selectedLanguage);
+      const greeting = selectedLanguage === 'Bahasa Melayu' 
+        ? `Hai ${displayName}! Saya Tigeria, kawan AI awak! 👋 ${firstQuestion}`
+        : `Hi ${displayName}! I'm Tigeria, your AI buddy! 👋 ${firstQuestion}`;
+      
+      const initialMessage: Message = {
+        type: 'ai',
+        message: greeting,
+        timestamp: new Date(),
+        hasAudio: true,
+      };
+      
+      // Set up conversation
+      setConversationHistory([initialMessage]);
+      setCurrentStep(0);
+      
+      console.log('🎤 Voice mode: Starting with question:', greeting);
+      
+      // Generate speech for the first question
+      await generateAndPlaySpeech(greeting);
+    }
   };
 
   useEffect(() => {
