@@ -240,8 +240,17 @@ Format your response as JSON array (empty [] if no educational content found):
     try {
       setLoading(true);
       
+      // Ensure sessionId is a valid string
+      const validSessionId = Array.isArray(sessionId) ? sessionId[0] : sessionId;
+      if (!validSessionId || typeof validSessionId !== 'string' || validSessionId.trim() === '') {
+        console.error('❌ Invalid session ID:', sessionId);
+        throw new Error('Invalid session ID provided');
+      }
+      
+      console.log('🔍 Loading session with ID:', validSessionId);
+      
       // Load session details with aggressive retry logic
-      let sessionData = await recordingServiceSupabase.getSessionById(sessionId as string);
+      let sessionData = await recordingServiceSupabase.getSessionById(validSessionId);
       let attempts = 0;
       const maxAttempts = 10; // More attempts for reliability
       
@@ -252,7 +261,7 @@ Format your response as JSON array (empty [] if no educational content found):
         
         // Exponential backoff: 1s, 2s, 3s, 4s, 5s...
         await new Promise(resolve => setTimeout(resolve, 1000 * attempts));
-        sessionData = await recordingServiceSupabase.getSessionById(sessionId as string);
+        sessionData = await recordingServiceSupabase.getSessionById(validSessionId);
         
         if (sessionData) {
           console.log('✅ Session found on attempt', attempts);
@@ -266,8 +275,8 @@ Format your response as JSON array (empty [] if no educational content found):
         try {
           const { data: directData, error: directError } = await supabase
             .from('recording_sessions')
-            .select('*')
-            .eq('id', sessionId)
+            .select('id, user_id, title, description, audio_uri, duration, transcript, summary, subjects, tags, created_at, updated_at')
+            .eq('id', validSessionId)
             .single();
           
           if (!directError && directData) {
@@ -283,7 +292,15 @@ Format your response as JSON array (empty [] if no educational content found):
         throw new Error(`Session not found after ${maxAttempts} attempts. The session may still be processing.`);
       }
       
+      // CRITICAL: Validate session has id before proceeding
+      if (!sessionData.id) {
+        console.error('❌ CRITICAL ERROR: Session data missing id!', sessionData);
+        throw new Error('Session data is invalid - missing session ID');
+      }
+      
       console.log('✅ Session loaded:', sessionData.id);
+      console.log('✅ Session summary:', sessionData.summary ? 'present' : 'missing');
+      console.log('✅ Session transcript:', sessionData.transcript ? 'present' : 'missing');
       setSession(sessionData);
       setEditingTitle(sessionData.title || '');
 
@@ -325,11 +342,25 @@ Overall Summary:`;
               'en'
             );
             
-            if (response.success && response.message) {
+            if (response.success && response.message && sessionData.id) {
               const summary = response.message.trim();
-              await recordingServiceSupabase.updateSession(sessionData.id, { summary });
-              setSession(prev => prev ? { ...prev, summary } : null);
-              console.log('✅ Summary regenerated successfully');
+              if (summary && summary.length > 10) {
+                const updateSuccess = await recordingServiceSupabase.updateSession(sessionData.id, { summary });
+                if (updateSuccess) {
+                  // Reload session to get fresh data from database
+                  const updatedSession = await recordingServiceSupabase.getSessionById(sessionData.id);
+                  if (updatedSession && updatedSession.id) {
+                    setSession(updatedSession);
+                    console.log('✅ Summary regenerated and session reloaded with summary');
+                  } else {
+                    // Fallback: update local state if reload fails
+                    setSession(prev => prev && prev.id ? { ...prev, summary } : null);
+                    console.log('✅ Summary regenerated, using local state update');
+                  }
+                } else {
+                  console.error('❌ Failed to save summary to database');
+                }
+              }
             }
           } catch (error) {
             console.error('Error regenerating summary:', error);
@@ -338,7 +369,7 @@ Overall Summary:`;
       }
 
       // Load sticky notes for this session with retry
-      let notes = await recordingServiceSupabase.getSessionStickyNotes(sessionId as string);
+      let notes = await recordingServiceSupabase.getSessionStickyNotes(validSessionId);
       
       // Retry loading notes multiple times if not found
       let noteAttempts = 0;
@@ -347,7 +378,7 @@ Overall Summary:`;
         noteAttempts++;
         console.log(`Loading sticky notes attempt ${noteAttempts}/${maxNoteAttempts}...`);
         await new Promise(resolve => setTimeout(resolve, 2000 * noteAttempts));
-        notes = await recordingServiceSupabase.getSessionStickyNotes(sessionId as string);
+        notes = await recordingServiceSupabase.getSessionStickyNotes(validSessionId);
         
         if (notes && notes.length > 0) {
           console.log('✅ Sticky notes found on attempt', noteAttempts);
@@ -362,7 +393,7 @@ Overall Summary:`;
         // Convert StickyNote to SessionStickyNote format
         const sessionNotes: SessionStickyNote[] = notes.map(note => ({
           id: note.id,
-          session_id: sessionId as string,
+          session_id: validSessionId,
           user_id: sessionData?.user_id || '',
           title: note.title,
           content: note.content || '',
@@ -381,7 +412,7 @@ Overall Summary:`;
         setStickyNotes([]);
         
         // Auto-generate sticky notes from transcript if available
-        if (sessionData?.transcript && sessionData.transcript.trim().length > 10) {
+        if (sessionData?.transcript && sessionData.transcript.trim().length > 10 && sessionData.id) {
           console.log('🔄 Auto-generating sticky notes from transcript...');
           // Generate sticky notes in the background without blocking UI
           generateStickyNotesFromTranscript(sessionData.id, sessionData.transcript, sessionData.user_id)
@@ -396,7 +427,7 @@ Overall Summary:`;
       const errorMessage = error instanceof Error ? error.message : 'Failed to load recording session data';
       
       // Even if loading fails, try to generate sticky notes if we have session data
-      if (session) {
+      if (session && session.id) {
         console.log('🔄 Session exists but loading failed, attempting to generate sticky notes from transcript...');
         if (session.transcript && session.transcript.trim().length > 10) {
           generateStickyNotesFromTranscript(session.id, session.transcript, session.user_id)
@@ -1033,14 +1064,16 @@ Format your response as JSON array (empty [] if no educational content found):
     );
   }
   
-  // Show loading if we don't have session yet
-  if (!session) {
+  // Show loading if we don't have session yet or session is invalid
+  if (!session || !session.id) {
     return (
       <View style={styles.loadingContainer}>
         <LoadingSpinner size={48} color="#667eea" />
         <Text style={styles.loadingText}>Loading session...</Text>
         <Text style={styles.loadingSubtext}>
-          This may take a few moments while we process your recording.
+          {!session 
+            ? 'This may take a few moments while we process your recording.'
+            : 'Session data is loading, please wait...'}
         </Text>
       </View>
     );
@@ -1151,9 +1184,14 @@ Format your response as JSON array (empty [] if no educational content found):
                   {/* Right: Transcript Icon Button */}
                   <TouchableOpacity
                     style={styles.transcriptIconButton}
-                    onPress={() => router.push(`/transcript?sessionId=${session.id}`)}
+                    onPress={() => {
+                      if (session?.id) {
+                        router.push(`/transcript?sessionId=${session.id}`);
+                      }
+                    }}
+                    disabled={!session?.id}
                   >
-                    <FileText size={20} color="#4ECDC4" />
+                    <FileText size={20} color={session?.id ? "#4ECDC4" : "#666"} />
                   </TouchableOpacity>
                 </View>
                 

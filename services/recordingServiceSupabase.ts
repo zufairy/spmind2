@@ -239,9 +239,10 @@ class RecordingServiceSupabase {
 
       const userId = authUser.id;
 
+      // Explicitly select id first to ensure it's always included
       const { data, error } = await supabase
         .from('recording_sessions')
-        .select('*')
+        .select('id, user_id, title, description, audio_uri, duration, transcript, summary, subjects, tags, created_at, updated_at')
         .eq('id', id)
         .eq('user_id', userId) // Use auth user ID
         .single();
@@ -257,19 +258,43 @@ class RecordingServiceSupabase {
         return null;
       }
 
+      // CRITICAL: Ensure id is present - use query parameter as fallback if data.id is missing
+      // This can happen if RLS policy filters out the id field
+      const sessionId = data.id || id; // Use provided id as fallback
+      
+      if (!sessionId) {
+        console.error('❌ CRITICAL ERROR: Session data missing id field and no fallback!', {
+          dataKeys: Object.keys(data),
+          requestedId: id,
+          dataId: data.id,
+          data: JSON.stringify(data, null, 2)
+        });
+        return null;
+      }
+
       // Ensure all required fields have valid values
+      // Spread data first, then override with validated values to ensure id is always set
       const validatedSession: RecordingSession = {
-        ...data,
+        ...data, // Spread all data from database first
+        id: sessionId, // CRITICAL: Override id to ensure it's never undefined (use fallback if needed)
+        user_id: data.user_id || userId, // Ensure user_id is set
         duration: typeof data.duration === 'number' && !isNaN(data.duration) ? data.duration : 0,
         title: data.title || 'Untitled Session',
         audio_uri: data.audio_uri || '',
         transcript: data.transcript || '',
         summary: data.summary || '',
+        description: data.description || null,
         subjects: Array.isArray(data.subjects) ? data.subjects : [],
         tags: Array.isArray(data.tags) ? data.tags : [],
         created_at: data.created_at || new Date().toISOString(),
         updated_at: data.updated_at || new Date().toISOString(),
       };
+
+      // Final validation - id must not be undefined
+      if (!validatedSession.id) {
+        console.error('❌ CRITICAL ERROR: Validated session still missing id!', validatedSession);
+        return null;
+      }
 
       console.log('✅ Session retrieved and validated:', {
         id: validatedSession.id,
@@ -817,11 +842,26 @@ Format your response as JSON array (empty [] if no educational content found):
                 await new Promise(resolve => setTimeout(resolve, waitTime));
                 continue;
               }
-            } else if (attemptData && attemptData.id) {
-              // Success!
-              sessionData = attemptData;
-              console.log(`✅ Session created successfully on attempt ${attempt}:`, sessionData.id);
-              break;
+            } else if (attemptData) {
+              // CRITICAL: Validate that id exists before accepting
+              if (!attemptData.id) {
+                console.error(`❌ CRITICAL ERROR: Session created but missing id field!`, {
+                  attemptData: JSON.stringify(attemptData, null, 2),
+                  attemptDataKeys: Object.keys(attemptData || {})
+                });
+                lastError = { message: 'Session created but missing id field' };
+                if (attempt < sessionMaxRetries) {
+                  const waitTime = attempt * 1000;
+                  console.log(`⏳ Waiting ${waitTime}ms before retry...`);
+                  await new Promise(resolve => setTimeout(resolve, waitTime));
+                  continue;
+                }
+              } else {
+                // Success - id exists!
+                sessionData = attemptData;
+                console.log(`✅ Session created successfully on attempt ${attempt}:`, sessionData.id);
+                break;
+              }
             } else {
               // Data is null or missing id - try querying by user_id and audio_uri as fallback
               console.warn(`⚠️ Attempt ${attempt} returned null data, trying to query by audio_uri...`);
