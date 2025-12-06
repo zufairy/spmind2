@@ -245,6 +245,16 @@ export default function CommunityScreen() {
     },
     {
       id: '3',
+      name: 'Matanaga',
+      description: 'Master mathematics with action',
+      image: require('../../assets/images/matanaga.png'),
+      online: 25,
+      difficulty: 'Hard',
+      color: '#FF8C42',
+      locked: true,
+    },
+    {
+      id: '4',
       name: 'Spell Bird',
       description: 'Master spelling and vocabulary',
       image: require('../../assets/images/spellbird.png'),
@@ -359,21 +369,6 @@ export default function CommunityScreen() {
             style={styles.miniGamesScrollView}
           >
             {miniGames.map((game, index) => {
-              // Split game name into words for tile display
-              const gameWords = game.name.split(' ');
-              const firstWord = gameWords[0] || '';
-              const secondWord = gameWords[1] || '';
-              
-              // Get emoji for each game
-              const getGameEmoji = (gameName: string) => {
-                if (gameName.includes('Bomb')) return '💣';
-                if (gameName.includes('Silat')) return '🥋';
-                if (gameName.includes('Spell') || gameName.includes('Bird')) return '🐦';
-                return '🎮';
-              };
-              
-              const gameEmoji = getGameEmoji(game.name);
-              
               return (
                 <Animatable.View
                   key={game.id}
@@ -381,31 +376,13 @@ export default function CommunityScreen() {
                   delay={index * 150}
                   style={styles.wordBombCard}
                 >
-                  {/* Dark Blue Banner Section */}
-                  <View style={styles.wordBombBanner}>
-                    {/* Large Icon - Top Center */}
-                    <View style={styles.wordBombLargeIcon}>
-                      <Text style={styles.wordBombEmoji}>{gameEmoji}</Text>
-                    </View>
-                    
-                    {/* First word in tiles */}
-                    <View style={styles.wordTilesContainer}>
-                      {firstWord.split('').map((letter, i) => (
-                        <View key={i} style={styles.wordTile}>
-                          <Text style={styles.wordTileText}>{letter}</Text>
-                        </View>
-                      ))}
-                    </View>
-                    
-                    {/* Second word in bold 3D style */}
-                    {secondWord && (
-                      <Text style={styles.bombText}>{secondWord}</Text>
-                    )}
-                    
-                    {/* Small icon - bottom right */}
-                    <View style={styles.wordBombSmallIcon}>
-                      <Text style={styles.wordBombEmojiSmall}>{gameEmoji}</Text>
-                    </View>
+                  {/* Game Image Container with padding */}
+                  <View style={styles.gameImageContainer}>
+                    <Image 
+                      source={game.image}
+                      style={styles.gameBannerImage}
+                      resizeMode="cover"
+                    />
                     
                     {/* Online indicator badge - bottom left */}
                     <View style={styles.wordBombOnlineBadge}>
@@ -510,8 +487,12 @@ export default function CommunityScreen() {
                       <Text style={styles.avatarInitial}>{leaderboardData[1].avatarInitial}</Text>
                     )}
                   </View>
-                  <View style={styles.rankBadge}>
-                    <Text style={styles.rankBadgeText}>2</Text>
+                  <View style={styles.medalBadge}>
+                    <Image 
+                      source={require('../../assets/images/2WIN.png')}
+                      style={styles.medalImage}
+                      resizeMode="contain"
+                    />
                   </View>
                 </View>
                 <Text style={styles.topThreeName}>{leaderboardData[1].name}</Text>
@@ -527,7 +508,13 @@ export default function CommunityScreen() {
                 delay={0}
                 style={styles.firstPlaceContainer}
               >
-                <Text style={styles.crownIcon}>👑</Text>
+                <View style={styles.medalBadgeFirst}>
+                  <Image 
+                    source={require('../../assets/images/1WIN.png')}
+                    style={styles.medalImageFirst}
+                    resizeMode="contain"
+                  />
+                </View>
                 <View style={styles.avatarContainerFirst}>
                   <View style={[styles.avatarPlaceholderFirst, { backgroundColor: leaderboardData[0].avatarColor }]}>
                     {leaderboardData[0].avatar_url ? (
@@ -568,8 +555,12 @@ export default function CommunityScreen() {
                       <Text style={styles.avatarInitial}>{leaderboardData[2].avatarInitial}</Text>
                     )}
                   </View>
-                  <View style={styles.rankBadge}>
-                    <Text style={styles.rankBadgeText}>3</Text>
+                  <View style={styles.medalBadge}>
+                    <Image 
+                      source={require('../../assets/images/3WIN.png')}
+                      style={styles.medalImage}
+                      resizeMode="contain"
+                    />
                   </View>
                 </View>
                 <Text style={styles.topThreeName}>{leaderboardData[2].name}</Text>
@@ -580,74 +571,54 @@ export default function CommunityScreen() {
           </View>
           )}
 
-          {/* Top 7 Leaderboard Section (Ranks 4-7) */}
+          {/* Border Separator */}
+          {topTenData.length > 3 && (
+            <View style={styles.leaderboardSeparator} />
+          )}
+
+          {/* Top 7 Leaderboard Section (Ranks 4-9) */}
           {topTenData.length > 3 && (
             <View style={styles.topFiveSection}>
-              
               <View style={styles.topFiveList}>
-                {topTenData.slice(3, 7).map((userData, index) => {
-                  const rank = index + 4; // Ranks 4-7 (showing 4 more users after top 3)
-                  const isCurrentUser = userData.isCurrentUser; // Check if this is the logged-in user
+                {topTenData.slice(3, 9).map((userData, index) => {
+                  const rank = index + 4; // Ranks 4-9
+                  const isCurrentUser = userData.isCurrentUser;
                   
                   return (
                     <Animatable.View
                       key={userData.id}
                       animation="fadeInUp"
-                      delay={300 + (index * 100)}
-                      style={[
-                        styles.topFiveItem,
-                        isCurrentUser && styles.currentUserHighlight
-                      ]}
+                      delay={300 + (index * 50)}
+                      style={styles.topFiveItem}
                     >
-                      {/* Rank Badge */}
-                      <View style={[
-                        styles.rankBadgeContainer,
-                        rank === 4 && styles.rankBadgeFourth,
-                        rank === 5 && styles.rankBadgeFifth,
-                        rank === 6 && styles.rankBadgeSixth,
-                        rank === 7 && styles.rankBadgeSeventh,
-                        rank === 8 && styles.rankBadgeEighth,
-                      ]}>
-                        <Text style={styles.rankBadgeNumber}>{rank}</Text>
-                        {isCurrentUser && <Text style={styles.youBadge}>YOU</Text>}
-                      </View>
+                      {/* Rank Number */}
+                      <Text style={styles.listRankNumber}>{rank}</Text>
 
                       {/* Avatar */}
                       <View style={[
-                        styles.topFiveAvatar,
-                        { backgroundColor: userData.avatarColor }
+                        styles.listAvatar,
+                        { backgroundColor: userData.avatarColor || '#E0E0E0' }
                       ]}>
                         {userData.avatar_url ? (
                           <Image 
                             source={{ uri: userData.avatar_url }}
-                            style={styles.topFiveAvatarImage}
+                            style={styles.listAvatarImage}
                           />
                         ) : (
-                          <Text style={styles.topFiveAvatarInitial}>{userData.avatarInitial}</Text>
+                          <Text style={styles.listAvatarInitial}>{userData.avatarInitial}</Text>
                         )}
                       </View>
 
                       {/* User Info */}
-                      <View style={styles.topFiveUserInfo}>
-                        <Text style={[
-                          styles.topFiveName,
-                          isCurrentUser && styles.currentUserName
-                        ]}>
+                      <View style={styles.listUserInfo}>
+                        <Text style={styles.listName}>
                           {isCurrentUser ? `${userData.name} (You)` : userData.name}
                         </Text>
-                        <Text style={styles.topFiveUsername}>{userData.username}</Text>
+                        <Text style={styles.listUsername}>{userData.username}</Text>
                       </View>
 
                       {/* Points */}
-                      <View style={styles.topFivePointsContainer}>
-                        <Text style={[
-                          styles.topFivePoints,
-                          isCurrentUser && styles.currentUserPoints
-                        ]}>
-                          {userData.points}
-                        </Text>
-                        <Text style={styles.topFivePointsLabel}>pts</Text>
-                      </View>
+                      <Text style={styles.listPoints}>{userData.points} pts</Text>
                     </Animatable.View>
                   );
                 })}
@@ -658,10 +629,21 @@ export default function CommunityScreen() {
           {/* Show More Button */}
           {topTenData.length > 7 && (
             <TouchableOpacity 
-              style={styles.showMoreButton}
+              style={[
+                styles.showMoreButton,
+                {
+                  backgroundColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)',
+                  borderColor: isDark ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.1)',
+                }
+              ]}
               onPress={() => setShowFullLeaderboard(true)}
             >
-              <Text style={styles.showMoreButtonText}>Show All ({topTenData.length})</Text>
+              <Text style={[
+                styles.showMoreButtonText,
+                { color: isDark ? '#FFFFFF' : '#000000' }
+              ]}>
+                Show All ({topTenData.length})
+              </Text>
             </TouchableOpacity>
           )}
         </View>
@@ -673,17 +655,37 @@ export default function CommunityScreen() {
           transparent={true}
           onRequestClose={() => setShowFullLeaderboard(false)}
         >
-          <View style={styles.modalOverlay}>
-            <View style={styles.modalContent}>
-              <View style={styles.modalHeader}>
-                <Text style={styles.modalTitle}>
+          <View style={[
+            styles.modalOverlay,
+            { backgroundColor: isDark ? 'rgba(0, 0, 0, 0.9)' : 'rgba(0, 0, 0, 0.7)' }
+          ]}>
+            <View style={[
+              styles.modalContent,
+              {
+                backgroundColor: isDark ? '#1a1a1a' : '#FFFFFF',
+                borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)',
+              }
+            ]}>
+              <View style={[
+                styles.modalHeader,
+                { borderBottomColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)' }
+              ]}>
+                <Text style={[
+                  styles.modalTitle,
+                  { color: isDark ? '#FFFFFF' : '#000000' }
+                ]}>
                   🏆 {selectedLeaderboardTab} Leaderboard
                 </Text>
                 <TouchableOpacity 
                   onPress={() => setShowFullLeaderboard(false)}
-                  style={styles.closeButton}
+                  style={[
+                    styles.closeButton,
+                    {
+                      backgroundColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)',
+                    }
+                  ]}
                 >
-                  <X size={24} color="#FFFFFF" />
+                  <X size={24} color={isDark ? "#FFFFFF" : "#000000"} />
                 </TouchableOpacity>
               </View>
               
@@ -695,11 +697,25 @@ export default function CommunityScreen() {
                     delay={index * 50}
                     style={[
                       styles.modalLeaderboardItem,
+                      {
+                        backgroundColor: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.03)',
+                        borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)',
+                      },
                       userData.isCurrentUser && styles.currentUserHighlight
                     ]}
                   >
-                    <View style={styles.modalRankContainer}>
-                      <Text style={styles.modalRankText}>{userData.rank}</Text>
+                    <View style={[
+                      styles.modalRankContainer,
+                      {
+                        backgroundColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)',
+                      }
+                    ]}>
+                      <Text style={[
+                        styles.modalRankText,
+                        { color: isDark ? '#FFFFFF' : '#000000' }
+                      ]}>
+                        {userData.rank}
+                      </Text>
                     </View>
                     <View style={[styles.modalAvatar, { backgroundColor: userData.avatarColor }]}>
                       {userData.avatar_url ? (
@@ -714,20 +730,32 @@ export default function CommunityScreen() {
                     <View style={styles.modalUserInfo}>
                       <Text style={[
                         styles.modalUserName,
+                        { color: isDark ? '#FFFFFF' : '#000000' },
                         userData.isCurrentUser && styles.currentUserName
                       ]}>
                         {userData.isCurrentUser ? `${userData.name} (You)` : userData.name}
                       </Text>
-                      <Text style={styles.modalUserUsername}>{userData.username}</Text>
+                      <Text style={[
+                        styles.modalUserUsername,
+                        { color: isDark ? 'rgba(255, 255, 255, 0.6)' : 'rgba(0, 0, 0, 0.5)' }
+                      ]}>
+                        {userData.username}
+                      </Text>
                     </View>
                     <View style={styles.modalPointsContainer}>
                       <Text style={[
                         styles.modalPoints,
+                        { color: isDark ? '#FFD700' : '#000000' },
                         userData.isCurrentUser && styles.currentUserPoints
                       ]}>
                         {userData.points}
                       </Text>
-                      <Text style={styles.modalPointsLabel}>pts</Text>
+                      <Text style={[
+                        styles.modalPointsLabel,
+                        { color: isDark ? 'rgba(255, 255, 255, 0.5)' : 'rgba(0, 0, 0, 0.5)' }
+                      ]}>
+                        pts
+                      </Text>
                     </View>
                   </Animatable.View>
                 ))}
@@ -795,12 +823,12 @@ const styles = StyleSheet.create({
   },
   joinStudyButton: {
     width: '100%',
-    borderRadius: 16,
+    borderRadius: 12,
     overflow: 'visible',
   },
   joinStudyButtonInner: {
     backgroundColor: '#58CC02',
-    borderRadius: 16,
+    borderRadius: 12,
     paddingVertical: 14,
     paddingHorizontal: 20,
     alignItems: 'center',
@@ -862,7 +890,7 @@ const styles = StyleSheet.create({
   },
   topBannerTitle: {
     fontSize: 20,
-    fontFamily: 'SpaceGrotesk-Bold',
+    fontFamily: 'Fredoka-Bold',
     color: '#FFFFFF',
     marginBottom: 4,
   },
@@ -875,7 +903,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     zIndex: 1000,
     elevation: 1000,
-    backgroundColor: '#000000',
+    backgroundColor: '#FFFFFF',
   },
   headerContent: {
     flexDirection: 'row',
@@ -891,7 +919,7 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     fontSize: 20,
-    color: '#FFFFFF',
+    color: '#000000',
     fontFamily: 'Fredoka-Regular',
   },
   headerLogo: {
@@ -901,25 +929,25 @@ const styles = StyleSheet.create({
   leaderboardSection: {
     marginBottom: 25,
     paddingBottom: 20,
-    backgroundColor: 'rgba(15, 15, 15, 0.95)',
+    backgroundColor: '#FFFFFF',
     borderRadius: 20,
     paddingHorizontal: 16,
     paddingTop: 24,
     marginHorizontal: 0,
     shadowColor: '#000000',
     shadowOffset: { width: 0, height: -4 },
-    shadowOpacity: 0.3,
+    shadowOpacity: 0.1,
     shadowRadius: 12,
     elevation: 8,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
+    borderColor: '#E0E0E0',
   },
   // Leaderboard Tabs
   leaderboardTabs: {
     flexDirection: 'row',
     marginBottom: 24,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255, 255, 255, 0.1)',
+    borderBottomColor: 'rgba(0, 0, 0, 0.1)',
   },
   leaderboardTab: {
     flex: 1,
@@ -928,11 +956,11 @@ const styles = StyleSheet.create({
   },
   leaderboardTabText: {
     fontSize: 16,
-    fontFamily: 'Inter-Medium',
-    color: 'rgba(255, 255, 255, 0.5)',
+    fontFamily: 'Fredoka-SemiBold',
+    color: 'rgba(0, 0, 0, 0.5)',
   },
   leaderboardTabTextActive: {
-    color: '#FFFFFF',
+    color: '#000000',
   },
   leaderboardTabIndicator: {
     position: 'absolute',
@@ -947,17 +975,27 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'flex-end',
     justifyContent: 'center',
-    marginBottom: 32,
+    marginBottom: 0,
+    paddingBottom: 24,
     gap: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(0, 0, 0, 0.1)',
   },
   // First Place
   firstPlaceContainer: {
     alignItems: 'center',
     flex: 1,
   },
-  crownIcon: {
-    fontSize: 32,
+  medalBadgeFirst: {
+    width: 50,
+    height: 50,
     marginBottom: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  medalImageFirst: {
+    width: '100%',
+    height: '100%',
   },
   avatarContainerFirst: {
     width: 100,
@@ -976,13 +1014,13 @@ const styles = StyleSheet.create({
   },
   topThreeNameFirst: {
     fontSize: 18,
-    fontFamily: 'SpaceGrotesk-Bold',
-    color: '#FFFFFF',
+    fontFamily: 'Fredoka-Bold',
+    color: '#000000',
     marginBottom: 4,
   },
   topThreePointsFirst: {
     fontSize: 24,
-    fontFamily: 'SpaceGrotesk-Bold',
+    fontFamily: 'Fredoka-Bold',
     color: '#FFD700',
     marginBottom: 4,
   },
@@ -1019,7 +1057,7 @@ const styles = StyleSheet.create({
   },
   avatarInitial: {
     fontSize: 32,
-    fontFamily: 'SpaceGrotesk-Bold',
+    fontFamily: 'Fredoka-Bold',
     color: '#FFFFFF',
   },
   topThreeAvatarImage: {
@@ -1037,13 +1075,26 @@ const styles = StyleSheet.create({
   },
   avatarInitialFirst: {
     fontSize: 40,
-    fontFamily: 'SpaceGrotesk-Bold',
+    fontFamily: 'Fredoka-Bold',
     color: '#FFFFFF',
   },
   topThreeAvatarImageFirst: {
     width: '100%',
     height: '100%',
     borderRadius: 50,
+  },
+  medalBadge: {
+    position: 'absolute',
+    bottom: -8,
+    right: -8,
+    width: 40,
+    height: 40,
+    zIndex: 100,
+    elevation: 100,
+  },
+  medalImage: {
+    width: '100%',
+    height: '100%',
   },
   rankBadge: {
     position: 'absolute',
@@ -1062,25 +1113,25 @@ const styles = StyleSheet.create({
   },
   rankBadgeText: {
     fontSize: 14,
-    fontFamily: 'SpaceGrotesk-Bold',
+    fontFamily: 'Fredoka-Bold',
     color: '#FFFFFF',
   },
   topThreeName: {
     fontSize: 16,
-    fontFamily: 'SpaceGrotesk-Bold',
-    color: '#FFFFFF',
+    fontFamily: 'Fredoka-Bold',
+    color: '#000000',
     marginBottom: 4,
   },
   topThreePoints: {
     fontSize: 20,
-    fontFamily: 'SpaceGrotesk-Bold',
+    fontFamily: 'Fredoka-Bold',
     color: '#3B82F6',
     marginBottom: 4,
   },
   topThreeUsername: {
     fontSize: 12,
-    fontFamily: 'Inter-Regular',
-    color: 'rgba(255, 255, 255, 0.5)',
+    fontFamily: 'Fredoka-Regular',
+    color: 'rgba(0, 0, 0, 0.5)',
   },
   // Leaderboard List
   leaderboardList: {
@@ -1111,7 +1162,7 @@ const styles = StyleSheet.create({
   },
   leaderboardAvatarInitial: {
     fontSize: 20,
-    fontFamily: 'SpaceGrotesk-Bold',
+    fontFamily: 'Fredoka-Bold',
     color: '#FFFFFF',
   },
   leaderboardInfo: {
@@ -1119,13 +1170,13 @@ const styles = StyleSheet.create({
   },
   leaderboardName: {
     fontSize: 16,
-    fontFamily: 'SpaceGrotesk-Bold',
+    fontFamily: 'Fredoka-Bold',
     color: '#FFFFFF',
     marginBottom: 2,
   },
   leaderboardUsername: {
     fontSize: 12,
-    fontFamily: 'Inter-Regular',
+    fontFamily: 'Fredoka-Regular',
     color: 'rgba(255, 255, 255, 0.5)',
   },
   leaderboardRight: {
@@ -1135,7 +1186,7 @@ const styles = StyleSheet.create({
   },
   leaderboardPoints: {
     fontSize: 18,
-    fontFamily: 'SpaceGrotesk-Bold',
+    fontFamily: 'Fredoka-Bold',
     color: '#FFFFFF',
   },
   trendIcon: {
@@ -1156,9 +1207,9 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
   },
   showMoreButton: {
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    backgroundColor: 'rgba(0, 0, 0, 0.05)',
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.2)',
+    borderColor: 'rgba(0, 0, 0, 0.1)',
     borderRadius: 12,
     paddingVertical: 14,
     paddingHorizontal: 24,
@@ -1167,8 +1218,8 @@ const styles = StyleSheet.create({
   },
   showMoreButtonText: {
     fontSize: 16,
-    fontFamily: 'SpaceGrotesk-Bold',
-    color: '#FFFFFF',
+    fontFamily: 'Fredoka-Bold',
+    color: '#000000',
     fontWeight: '700',
   },
   headerButton: {
@@ -1184,7 +1235,7 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontSize: 18,
-    fontFamily: 'SpaceGrotesk-Bold',
+    fontFamily: 'Fredoka-Bold',
     color: '#FFFFFF',
     marginBottom: 12,
     fontWeight: '600',
@@ -1213,7 +1264,7 @@ const styles = StyleSheet.create({
   },
   groupName: {
     fontSize: 16,
-    fontFamily: 'Inter-Bold',
+    fontFamily: 'Fredoka-Bold',
     color: '#FFFFFF',
     marginBottom: 6,
     lineHeight: 20,
@@ -1221,7 +1272,7 @@ const styles = StyleSheet.create({
   },
   groupDescription: {
     fontSize: 12,
-    fontFamily: 'Inter-Regular',
+    fontFamily: 'Fredoka-Regular',
     color: 'rgba(255, 255, 255, 0.7)',
     lineHeight: 16,
     marginBottom: 8,
@@ -1245,7 +1296,7 @@ const styles = StyleSheet.create({
   },
   gameOnlineText: {
     fontSize: 12,
-    fontFamily: 'Inter-Medium',
+    fontFamily: 'Fredoka-SemiBold',
     color: '#00FF00',
   },
   topicTags: {
@@ -1264,7 +1315,7 @@ const styles = StyleSheet.create({
   },
   topicText: {
     fontSize: 12,
-    fontFamily: 'Inter-Medium',
+    fontFamily: 'Fredoka-SemiBold',
     color: '#FFFFFF',
   },
   joinButton: {
@@ -1280,7 +1331,7 @@ const styles = StyleSheet.create({
   },
   joinButtonText: {
     fontSize: 14,
-    fontFamily: 'Inter-Bold',
+    fontFamily: 'Fredoka-Bold',
     color: '#000000',
   },
   miniGamesScrollView: {
@@ -1289,6 +1340,7 @@ const styles = StyleSheet.create({
   miniGamesContainer: {
     paddingLeft: 16,
     paddingRight: 16,
+    paddingVertical: 8,
   },
   gameCard: {
     width: width * 0.75,
@@ -1329,7 +1381,7 @@ const styles = StyleSheet.create({
   },
   gameName: {
     fontSize: 20,
-    fontFamily: 'SpaceGrotesk-Bold',
+    fontFamily: 'Fredoka-Bold',
     color: '#FFFFFF',
   },
   difficultyBadge: {
@@ -1339,12 +1391,12 @@ const styles = StyleSheet.create({
   },
   difficultyText: {
     fontSize: 12,
-    fontFamily: 'Inter-Medium',
+    fontFamily: 'Fredoka-SemiBold',
     color: '#FFFFFF',
   },
   gameDescription: {
     fontSize: 14,
-    fontFamily: 'Inter-Regular',
+    fontFamily: 'Fredoka-Regular',
     color: '#CCCCCC',
     marginBottom: 10,
   },
@@ -1367,7 +1419,7 @@ const styles = StyleSheet.create({
   },
   onlineText: {
     fontSize: 12,
-    fontFamily: 'Inter-Medium',
+    fontFamily: 'Fredoka-SemiBold',
     color: '#00FF00',
   },
   startGameButton: {
@@ -1388,7 +1440,7 @@ const styles = StyleSheet.create({
   },
   startGameText: {
     fontSize: 14,
-    fontFamily: 'Inter-SemiBold',
+    fontFamily: 'Fredoka-SemiBold',
     color: '#000000',
   },
   lockedGameText: {
@@ -1397,25 +1449,31 @@ const styles = StyleSheet.create({
   // Word Bomb Special Design
   wordBombCard: {
     width: width * 0.75,
-    marginRight: 12,
+    marginRight: 16,
     backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    borderWidth: 2,
-    borderColor: '#E0E0E0',
-    overflow: 'hidden',
+    borderRadius: 20,
+    padding: 16,
+    marginBottom: 20,
     shadowColor: '#000000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 8,
     elevation: 4,
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
   },
-  wordBombBanner: {
-    backgroundColor: '#1E3A8A',
-    padding: 16,
-    paddingTop: 20,
-    paddingBottom: 20,
+  gameImageContainer: {
+    width: '100%',
+    height: 180,
+    borderRadius: 12,
+    overflow: 'hidden',
+    marginBottom: 12,
     position: 'relative',
-    minHeight: 140,
+    backgroundColor: '#F5F5F5',
+  },
+  gameBannerImage: {
+    width: '100%',
+    height: '100%',
   },
   wordBombLargeIcon: {
     position: 'absolute',
@@ -1446,7 +1504,7 @@ const styles = StyleSheet.create({
   },
   wordTileText: {
     fontSize: 18,
-    fontFamily: 'Inter-Bold',
+    fontFamily: 'Fredoka-Bold',
     color: '#333333',
     fontWeight: '700',
   },
@@ -1491,7 +1549,7 @@ const styles = StyleSheet.create({
   },
   wordBombOnlineText: {
     fontSize: 11,
-    fontFamily: 'Inter-Medium',
+    fontFamily: 'Fredoka-SemiBold',
     color: '#000000',
     fontWeight: '500',
   },
@@ -1536,8 +1594,8 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     fontSize: 16,
-    fontFamily: 'Inter-Regular',
-    color: 'rgba(255, 255, 255, 0.6)',
+    fontFamily: 'Fredoka-Regular',
+    color: 'rgba(0, 0, 0, 0.6)',
   },
   // Modal styles
   modalOverlay: {
@@ -1566,7 +1624,7 @@ const styles = StyleSheet.create({
   },
   modalTitle: {
     fontSize: 24,
-    fontFamily: 'SpaceGrotesk-Bold',
+    fontFamily: 'Fredoka-Bold',
     color: '#FFFFFF',
   },
   closeButton: {
@@ -1601,7 +1659,7 @@ const styles = StyleSheet.create({
   },
   modalRankText: {
     fontSize: 16,
-    fontFamily: 'SpaceGrotesk-Bold',
+    fontFamily: 'Fredoka-Bold',
     color: '#FFFFFF',
   },
   modalAvatar: {
@@ -1619,7 +1677,7 @@ const styles = StyleSheet.create({
   },
   modalAvatarInitial: {
     fontSize: 20,
-    fontFamily: 'SpaceGrotesk-Bold',
+    fontFamily: 'Fredoka-Bold',
     color: '#FFFFFF',
   },
   modalUserInfo: {
@@ -1627,13 +1685,13 @@ const styles = StyleSheet.create({
   },
   modalUserName: {
     fontSize: 16,
-    fontFamily: 'Inter-Bold',
+    fontFamily: 'Fredoka-Bold',
     color: '#FFFFFF',
     marginBottom: 2,
   },
   modalUserUsername: {
     fontSize: 13,
-    fontFamily: 'Inter-Regular',
+    fontFamily: 'Fredoka-Regular',
     color: 'rgba(255, 255, 255, 0.6)',
   },
   modalPointsContainer: {
@@ -1641,44 +1699,39 @@ const styles = StyleSheet.create({
   },
   modalPoints: {
     fontSize: 20,
-    fontFamily: 'SpaceGrotesk-Bold',
+    fontFamily: 'Fredoka-Bold',
     color: '#FFD700',
   },
   modalPointsLabel: {
     fontSize: 12,
-    fontFamily: 'Inter-Regular',
+    fontFamily: 'Fredoka-Regular',
     color: 'rgba(255, 255, 255, 0.5)',
   },
   // Top 5 Leaderboard Styles
+  leaderboardSeparator: {
+    height: 0,
+    marginVertical: 0,
+  },
   topFiveSection: {
     marginBottom: 32,
-    paddingHorizontal: 4,
+    paddingHorizontal: 0,
   },
   topFiveSectionTitle: {
     fontSize: 20,
-    fontFamily: 'SpaceGrotesk-Bold',
+    fontFamily: 'Fredoka-Bold',
     color: '#FFFFFF',
     textAlign: 'center',
     marginBottom: 20,
     fontWeight: '700',
   },
   topFiveList: {
-    gap: 12,
+    gap: 0,
   },
   topFiveItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
-    borderRadius: 16,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
-    position: 'relative',
-    shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
   },
   currentUserHighlight: {
     backgroundColor: 'rgba(255, 215, 0, 0.1)',
@@ -1726,8 +1779,8 @@ const styles = StyleSheet.create({
   },
   rankBadgeNumber: {
     fontSize: 18,
-    fontFamily: 'SpaceGrotesk-Bold',
-    color: '#FFFFFF',
+    fontFamily: 'Fredoka-Bold',
+    color: '#000000',
     fontWeight: '800',
   },
   youBadge: {
@@ -1735,7 +1788,7 @@ const styles = StyleSheet.create({
     top: -8,
     right: -8,
     fontSize: 8,
-    fontFamily: 'Inter-Bold',
+    fontFamily: 'Fredoka-Bold',
     color: '#FFD700',
     backgroundColor: 'rgba(0, 0, 0, 0.8)',
     paddingHorizontal: 4,
@@ -1758,7 +1811,7 @@ const styles = StyleSheet.create({
   },
   topFiveAvatarInitial: {
     fontSize: 22,
-    fontFamily: 'SpaceGrotesk-Bold',
+    fontFamily: 'Fredoka-Bold',
     color: '#FFFFFF',
   },
   topFiveUserInfo: {
@@ -1766,8 +1819,8 @@ const styles = StyleSheet.create({
   },
   topFiveName: {
     fontSize: 16,
-    fontFamily: 'SpaceGrotesk-Bold',
-    color: '#FFFFFF',
+    fontFamily: 'Fredoka-Bold',
+    color: '#000000',
     marginBottom: 2,
     fontWeight: '600',
   },
@@ -1777,8 +1830,8 @@ const styles = StyleSheet.create({
   },
   topFiveUsername: {
     fontSize: 12,
-    fontFamily: 'Inter-Regular',
-    color: 'rgba(255, 255, 255, 0.5)',
+    fontFamily: 'Fredoka-Regular',
+    color: 'rgba(0, 0, 0, 0.5)',
   },
   topFivePointsContainer: {
     alignItems: 'flex-end',
@@ -1786,8 +1839,8 @@ const styles = StyleSheet.create({
   },
   topFivePoints: {
     fontSize: 18,
-    fontFamily: 'SpaceGrotesk-Bold',
-    color: '#FFFFFF',
+    fontFamily: 'Fredoka-Bold',
+    color: '#000000',
     fontWeight: '700',
   },
   currentUserPoints: {
@@ -1796,8 +1849,53 @@ const styles = StyleSheet.create({
   },
   topFivePointsLabel: {
     fontSize: 10,
-    fontFamily: 'Inter-Regular',
-    color: 'rgba(255, 255, 255, 0.5)',
+    fontFamily: 'Fredoka-Regular',
+    color: 'rgba(0, 0, 0, 0.5)',
+  },
+  // List Style for ranks 4-9
+  listRankNumber: {
+    fontSize: 16,
+    fontFamily: 'Fredoka-Regular',
+    color: '#000000',
+    width: 30,
+    marginRight: 12,
+  },
+  listAvatar: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+    overflow: 'hidden',
+  },
+  listAvatarImage: {
+    width: 40,
+    height: 40,
+  },
+  listAvatarInitial: {
+    fontSize: 16,
+    fontFamily: 'Fredoka-Bold',
+    color: '#FFFFFF',
+  },
+  listUserInfo: {
+    flex: 1,
+  },
+  listName: {
+    fontSize: 16,
+    fontFamily: 'Fredoka-Regular',
+    color: '#000000',
+    marginBottom: 2,
+  },
+  listUsername: {
+    fontSize: 12,
+    fontFamily: 'Fredoka-Regular',
+    color: 'rgba(0, 0, 0, 0.5)',
+  },
+  listPoints: {
+    fontSize: 14,
+    fontFamily: 'Fredoka-Regular',
+    color: 'rgba(0, 0, 0, 0.5)',
   },
   achievementBadge: {
     position: 'absolute',
