@@ -1336,16 +1336,16 @@ const styles = StyleSheet.create({
     flex: 1,
     zIndex: 201,
     pointerEvents: 'none',
-    alignItems: 'flex-start',
+    alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 10,
-    paddingLeft: 0,
   },
   headerLogo: {
     fontSize: 24,
     fontFamily: 'Fredoka-SemiBold',
     color: '#FFFFFF',
     fontWeight: '600',
+    textAlign: 'center',
   },
   headerRight: {
     width: 36,

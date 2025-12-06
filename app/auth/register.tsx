@@ -61,8 +61,10 @@ export default function RegisterScreen() {
   const logoAnim = useRef(new Animated.Value(0)).current;
   const titleAnim = useRef(new Animated.Value(0)).current;
   const formAnim = useRef(new Animated.Value(0)).current;
+  // Festive confetti - lots of colorful pieces
+  const confettiColors = ['#FF6B6B', '#4ECDC4', '#FFE66D', '#95E1D3', '#F38181', '#AA96DA', '#FCBAD3', '#A8D8EA', '#FF9F43', '#6C5CE7', '#FD79A8', '#00B894', '#E17055', '#74B9FF'];
   const confettiAnims = useRef(
-    Array.from({ length: 50 }, () => ({
+    Array.from({ length: 100 }, (_, i) => ({
       x: new Animated.Value(0),
       y: new Animated.Value(-100),
       rotate: new Animated.Value(0),
@@ -455,45 +457,55 @@ export default function RegisterScreen() {
           useNativeDriver: true,
         }).start();
         
-        // Animate confetti
+        // Animate confetti - dramatic festive fall
         confettiAnims.forEach((anim, i) => {
-          const randomX = Math.random() * 400 - 200;
-          const randomRotate = Math.random() * 720;
-          const delay = Math.random() * 300;
+          // Random starting position across the screen
+          const startX = Math.random() * 500 - 250;
+          const endX = startX + (Math.random() * 200 - 100);
+          const randomRotate = Math.random() * 1080;
+          const delay = Math.random() * 1500; // Staggered start
+          const duration = 2500 + Math.random() * 2000;
+          
+          // Reset values
+          anim.x.setValue(startX);
+          anim.y.setValue(-50 - Math.random() * 150);
+          anim.rotate.setValue(0);
+          anim.opacity.setValue(1);
           
           Animated.parallel([
+            // Horizontal drift
             Animated.timing(anim.x, {
-              toValue: randomX,
-              duration: 2000,
+              toValue: endX,
+              duration,
               delay,
               useNativeDriver: true,
             }),
+            // Fall down
             Animated.timing(anim.y, {
-              toValue: 800,
-              duration: 2000,
+              toValue: 1000,
+              duration,
               delay,
               useNativeDriver: true,
             }),
+            // Spin while falling
             Animated.timing(anim.rotate, {
               toValue: randomRotate,
-              duration: 2000,
+              duration,
               delay,
               useNativeDriver: true,
             }),
+            // Fade out at the end
             Animated.timing(anim.opacity, {
               toValue: 0,
-              duration: 2000,
-              delay: delay + 1000,
+              duration: 1000,
+              delay: delay + duration - 500,
               useNativeDriver: true,
             }),
           ]).start();
         });
         
-        // Redirect to onboarding after celebration
-        setTimeout(() => {
-          setLoading(false);
-          router.replace('/onboarding');
-        }, 2500);
+        // Don't auto-redirect - wait for user to click the button
+        setLoading(false);
       } else {
         console.warn('⚠️ Register: No user returned from registration');
         setLoading(false);
@@ -797,28 +809,37 @@ export default function RegisterScreen() {
         <View style={styles.modalOverlay}>
           <StarryBackground />
           
-          {/* Confetti */}
-          {confettiAnims.map((anim, i) => (
-            <Animated.View
-              key={i}
-              style={[
-                styles.confetti,
-                {
-                  left: '50%',
-                  backgroundColor: ['#FF6B35', '#FFD700', '#00FF00', '#3B82F6', '#FF1493'][i % 5],
-                  transform: [
-                    { translateX: anim.x },
-                    { translateY: anim.y },
-                    { rotate: anim.rotate.interpolate({
-                      inputRange: [0, 360],
-                      outputRange: ['0deg', '360deg'],
-                    })},
-                  ],
-                  opacity: anim.opacity,
-                },
-              ]}
-            />
-          ))}
+          {/* Confetti - lots of colorful pieces falling dramatically */}
+          {confettiAnims.map((anim, i) => {
+            const size = 8 + (i % 5) * 3; // Varied sizes 8-20
+            const isCircle = i % 3 === 0;
+            const isRectangle = i % 4 === 0;
+            
+            return (
+              <Animated.View
+                key={i}
+                style={[
+                  styles.confetti,
+                  {
+                    left: '50%',
+                    width: isRectangle ? size * 0.5 : size,
+                    height: isRectangle ? size * 1.5 : size,
+                    backgroundColor: confettiColors[i % confettiColors.length],
+                    borderRadius: isCircle ? size / 2 : 2,
+                    transform: [
+                      { translateX: anim.x },
+                      { translateY: anim.y },
+                      { rotate: anim.rotate.interpolate({
+                        inputRange: [0, 1080],
+                        outputRange: ['0deg', '1080deg'],
+                      })},
+                    ],
+                    opacity: anim.opacity,
+                  },
+                ]}
+              />
+            );
+          })}
           
           {/* Success Card */}
           <Animated.View
@@ -833,9 +854,16 @@ export default function RegisterScreen() {
               Welcome to SPMind!{'\n'}
               Your account has been created successfully.
             </Text>
-            <View style={styles.successBadge}>
+            <TouchableOpacity 
+              style={styles.successBadge}
+              onPress={() => {
+                setShowSuccessModal(false);
+                router.replace('/onboarding');
+              }}
+              activeOpacity={0.8}
+            >
               <Text style={styles.successBadgeText}>Let's start your journey! 🚀</Text>
-            </View>
+            </TouchableOpacity>
           </Animated.View>
         </View>
       </Modal>
@@ -1112,9 +1140,7 @@ const styles = StyleSheet.create({
   },
   confetti: {
     position: 'absolute',
-    width: 12,
-    height: 12,
-    borderRadius: 6,
+    zIndex: 100,
   },
   successCard: {
     backgroundColor: 'rgba(255, 255, 255, 0.15)',
