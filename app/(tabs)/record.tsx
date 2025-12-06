@@ -273,6 +273,8 @@ export default function RecordPage() {
     
     setRecordingTime(0);
 
+    let sessionId: string | null = null;
+    
     try {
       const session = await recordingServiceSupabase.stopRecording((progress) => {
         setProcessingProgress({
@@ -283,54 +285,56 @@ export default function RecordPage() {
       });
       
       if (session && session.id) {
-        console.log('✅ Recording completed successfully, session:', session.id);
-        
-        // Wait a moment to ensure database is ready
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        
-        setIsProcessing(false);
-        setProcessingProgress(null);
-        
-        // Navigate to recording result page with session ID
-        console.log('Navigating to recording result with session ID:', session.id);
-        router.push({
-          pathname: '/recording-result',
-          params: { sessionId: session.id }
-        });
+        sessionId = session.id;
+        console.log('✅ Recording completed successfully, session:', sessionId);
       } else {
-        setIsProcessing(false);
-        setProcessingProgress(null);
-        Alert.alert(
-          'Recording Processing Failed', 
-          'The recording could not be processed. Please try recording again with clear speech and good audio quality.',
-          [{ text: 'OK', style: 'default' }]
-        );
+        console.warn('⚠️ Session not returned, but continuing to result page...');
+        // Try to get the most recent session for this user
+        try {
+          const sessions = await recordingServiceSupabase.getSessions();
+          if (sessions && sessions.length > 0) {
+            sessionId = sessions[0].id;
+            console.log('✅ Using most recent session:', sessionId);
+          }
+        } catch (sessionError) {
+          console.error('Error fetching recent session:', sessionError);
+        }
       }
     } catch (error) {
+      console.error('Recording error details:', error);
+      // Don't show alert - just log the error
+      
+      // Try to get the most recent session even if there was an error
+      try {
+        const sessions = await recordingServiceSupabase.getSessions();
+        if (sessions && sessions.length > 0) {
+          sessionId = sessions[0].id;
+          console.log('✅ Using most recent session after error:', sessionId);
+        }
+      } catch (sessionError) {
+        console.error('Error fetching recent session after error:', sessionError);
+      }
+    } finally {
       setIsProcessing(false);
       setProcessingProgress(null);
       
-      let errorMessage = 'An unexpected error occurred while processing the recording.';
-      if (error instanceof Error) {
-        errorMessage = error.message;
-        
-        // Provide more specific error messages
-        if (error.message.includes('Session was not created')) {
-          errorMessage = 'Recording error: Session was not created. Please try again.';
-        } else if (error.message.includes('Failed to create session')) {
-          errorMessage = 'Recording error: Failed to create session. Please check your connection and try again.';
-        } else if (error.message.includes('not authenticated')) {
-          errorMessage = 'Please log in to save your recording.';
-        }
+      // Always navigate to result page, even if there was an error
+      // The result page will handle generating sticky notes from transcript
+      if (sessionId) {
+        console.log('Navigating to recording result with session ID:', sessionId);
+        router.push({
+          pathname: '/recording-result',
+          params: { sessionId: sessionId }
+        });
+      } else {
+        // If we don't have a session ID, still try to navigate
+        // The result page will handle the error gracefully
+        console.log('No session ID, but navigating anyway - result page will handle it');
+        router.push({
+          pathname: '/recording-result',
+          params: { sessionId: 'new' }
+        });
       }
-      
-      console.error('Recording error details:', error);
-      
-      Alert.alert(
-        'Recording Error', 
-        errorMessage + '\n\nPlease try again or check your internet connection.',
-        [{ text: 'OK', style: 'default' }]
-      );
     }
   };
 

@@ -172,6 +172,13 @@ export default function NotesPage() {
 
   // Handle delete sticky note
   const handleDeleteStickyNote = async (noteId: string) => {
+    // Validate note ID before proceeding
+    if (!noteId || noteId.trim() === '' || noteId === 'undefined') {
+      console.error('Error: Note ID is undefined, empty, or invalid:', noteId);
+      Alert.alert('Error', 'Cannot delete note: Note ID is missing');
+      return;
+    }
+
     Alert.alert(
       'Delete Note',
       'Are you sure you want to delete this note?',
@@ -182,6 +189,13 @@ export default function NotesPage() {
           style: 'destructive',
           onPress: async () => {
             try {
+              // Validate note ID again before deletion
+              if (!noteId || noteId.trim() === '' || noteId === 'undefined') {
+                console.error('Error: Note ID is undefined, empty, or invalid during deletion:', noteId);
+                Alert.alert('Error', 'Cannot delete note: Note ID is missing');
+                return;
+              }
+
               const currentUser = await authService.getCurrentUser();
               if (!currentUser) {
                 Alert.alert('Error', 'User not authenticated');
@@ -197,8 +211,13 @@ export default function NotesPage() {
 
               if (error) {
                 console.error('Error deleting session sticky note:', error);
-                // Fallback to regular delete
-                await notesService.deleteStickyNote(noteId);
+                // Only try fallback if noteId is valid
+                if (noteId && noteId.trim() !== '' && noteId !== 'undefined') {
+                  await notesService.deleteStickyNote(noteId);
+                } else {
+                  Alert.alert('Error', 'Failed to delete note: Invalid note ID');
+                  return;
+                }
               }
 
               loadStickyNotes();

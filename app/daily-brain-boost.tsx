@@ -86,6 +86,7 @@ export default function DailyBrainBoostScreen() {
   const recordingStartTime = useRef<number>(0);
   const timerInterval = useRef<ReturnType<typeof setInterval> | null>(null);
   const conversationScrollRef = useRef<ScrollView>(null);
+  const lottieRef = useRef<any>(null);
 
   // Page fade-in animation (faster for better UX)
   useEffect(() => {

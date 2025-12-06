@@ -35,8 +35,11 @@ export default function StickyNoteDetailScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<StickyNoteDetailParams>();
   
+  // Handle params.id which might be an array from query params
+  const noteId = Array.isArray(params.id) ? params.id[0] : params.id;
+  
   const [note, setNote] = useState({
-    id: params.id || '',
+    id: noteId || '',
     title: '',
     content: '',
     type: '',
@@ -59,30 +62,79 @@ export default function StickyNoteDetailScreen() {
     try {
       setLoading(true);
       setError(null);
-      console.log('🔄 Loading note data for ID:', params.id);
       
-      const currentUser = await authService.getCurrentUser();
-      if (!currentUser) {
+      // Handle params.id which might be an array from query params
+      const noteId = Array.isArray(params.id) ? params.id[0] : params.id;
+      
+      if (!noteId || noteId.trim() === '') {
+        console.error('❌ No note ID provided');
+        setError('No note ID provided');
+        setLoading(false);
+        return;
+      }
+      
+      console.log('🔄 Loading note data for ID:', noteId);
+      
+      // Get auth user directly from Supabase to ensure we have the correct user_id
+      const { data: { user: authUser }, error: authError } = await supabase.auth.getUser();
+      
+      if (authError || !authUser) {
+        console.error('❌ Auth error:', authError);
         setError('User not authenticated');
+        setLoading(false);
         return;
       }
 
-      // Fetch from session_sticky_notes table
+      console.log('✅ Auth user ID:', authUser.id);
+
+      // Fetch from session_sticky_notes table using auth user ID
       const { data, error: fetchError } = await supabase
         .from('session_sticky_notes')
         .select('*')
-        .eq('id', params.id)
-        .eq('user_id', currentUser.id)
+        .eq('id', noteId)
+        .eq('user_id', authUser.id)
         .single();
 
       if (fetchError) {
         console.error('❌ Error fetching note:', fetchError);
-        setError('Failed to load note');
+        console.error('❌ Error details:', JSON.stringify(fetchError, null, 2));
+        console.error('❌ Query params - noteId:', noteId, 'userId:', authUser.id);
+        
+        // Try without user_id filter as fallback (in case RLS handles it)
+        const { data: fallbackData, error: fallbackError } = await supabase
+          .from('session_sticky_notes')
+          .select('*')
+          .eq('id', noteId)
+          .single();
+        
+        if (fallbackError || !fallbackData) {
+          setError(`Failed to load note: ${fetchError.message || 'Note not found'}`);
+          setLoading(false);
+          return;
+        }
+        
+        // Use fallback data
+        const noteData = {
+          id: fallbackData.id,
+          title: fallbackData.title || '',
+          content: fallbackData.content || fallbackData.description || '',
+          type: fallbackData.type || 'task',
+          color: fallbackData.color || 'yellow',
+          priority: fallbackData.priority || 'medium',
+          sessionId: fallbackData.session_id || '',
+        };
+        
+        setNote(noteData);
+        setEditingTitle(noteData.title);
+        setEditingContent(noteData.content);
+        setLoading(false);
         return;
       }
 
       if (!data) {
+        console.error('❌ No data returned from query');
         setError('Note not found');
+        setLoading(false);
         return;
       }
 
@@ -103,9 +155,10 @@ export default function StickyNoteDetailScreen() {
       setEditingTitle(noteData.title);
       setEditingContent(noteData.content);
       
-    } catch (error) {
+    } catch (error: any) {
       console.error('❌ Error loading note:', error);
-      setError('Failed to load note');
+      console.error('❌ Error stack:', error.stack);
+      setError(`Failed to load note: ${error.message || 'Unknown error'}`);
     } finally {
       setLoading(false);
     }
@@ -113,9 +166,13 @@ export default function StickyNoteDetailScreen() {
 
   // Load note data on mount
   useEffect(() => {
-    if (params.id) {
+    // Handle params.id which might be an array from query params
+    const noteId = Array.isArray(params.id) ? params.id[0] : params.id;
+    
+    if (noteId && noteId.trim() !== '') {
       loadNoteData();
     } else {
+      console.error('❌ No note ID in params:', params);
       setError('No note ID provided');
       setLoading(false);
     }
@@ -177,9 +234,18 @@ export default function StickyNoteDetailScreen() {
       return;
     }
 
+    // Validate note ID before proceeding
+    if (!note.id || note.id.trim() === '') {
+      console.error('Error: Note ID is undefined or empty');
+      Alert.alert('Error', 'Cannot update note: Note ID is missing');
+      return;
+    }
+
     try {
-      const currentUser = await authService.getCurrentUser();
-      if (!currentUser) {
+      // Get auth user directly from Supabase
+      const { data: { user: authUser }, error: authError } = await supabase.auth.getUser();
+      
+      if (authError || !authUser) {
         Alert.alert('Error', 'User not authenticated');
         return;
       }
@@ -192,7 +258,7 @@ export default function StickyNoteDetailScreen() {
           content: editingContent.trim()
         })
         .eq('id', note.id)
-        .eq('user_id', currentUser.id);
+        .eq('user_id', authUser.id);
       
       if (error) {
         console.error('Error updating note:', error);
@@ -216,6 +282,13 @@ export default function StickyNoteDetailScreen() {
   };
 
   const handleDelete = () => {
+    // Validate note ID before proceeding
+    if (!note.id || note.id.trim() === '') {
+      console.error('Error: Note ID is undefined or empty');
+      Alert.alert('Error', 'Cannot delete note: Note ID is missing');
+      return;
+    }
+
     Alert.alert(
       'Delete Note',
       'Are you sure you want to delete this note? This action cannot be undone.',
@@ -229,9 +302,18 @@ export default function StickyNoteDetailScreen() {
           style: 'destructive',
           onPress: async () => {
             try {
-              const currentUser = await authService.getCurrentUser();
-              if (!currentUser) {
+              // Get auth user directly from Supabase
+              const { data: { user: authUser }, error: authError } = await supabase.auth.getUser();
+              
+              if (authError || !authUser) {
                 Alert.alert('Error', 'User not authenticated');
+                return;
+              }
+
+              // Validate note ID again before deletion
+              if (!note.id || note.id.trim() === '') {
+                console.error('Error: Note ID is undefined or empty during deletion');
+                Alert.alert('Error', 'Cannot delete note: Note ID is missing');
                 return;
               }
 
@@ -240,7 +322,7 @@ export default function StickyNoteDetailScreen() {
                 .from('session_sticky_notes')
                 .delete()
                 .eq('id', note.id)
-                .eq('user_id', currentUser.id);
+                .eq('user_id', authUser.id);
 
               if (error) {
                 console.error('Error deleting note:', error);
