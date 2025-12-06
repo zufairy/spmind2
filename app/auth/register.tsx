@@ -220,42 +220,21 @@ export default function RegisterScreen() {
     setPasswordValid(text.length >= 6);
   };
 
-  // Test Supabase connection on mount
+  // Test Supabase connection on mount (silent - no blocking alerts)
   useEffect(() => {
     const testConnection = async () => {
-      console.log('🔍 Testing Supabase connection...');
-      
-      // First test overall Supabase connection
-      const supabaseTest = await testSupabaseConnection();
-      if (!supabaseTest.urlReachable) {
-        console.error('❌ Cannot reach Supabase URL. Check if your project is active in Supabase Dashboard.');
-        Alert.alert(
-          'Connection Error',
-          'Cannot connect to Supabase. Please check:\n\n1. Your Supabase project is active\n2. Project URL is correct\n3. Your internet connection'
-        );
-        return;
-      }
-      
-      if (supabaseTest.error?.includes('API key') || supabaseTest.error?.includes('Invalid')) {
-        console.error('❌ Invalid Supabase API key');
-        Alert.alert(
-          'Configuration Error',
-          'Invalid Supabase API key. Please:\n\n1. Go to Supabase Dashboard → Settings → API\n2. Copy the "anon public" key (starts with eyJ...)\n3. Update it in services/supabase.ts'
-        );
-        return;
-      }
-      
-      // Then test database connection and RPC functions
-      const dbStatus = await testDatabaseConnection();
-      if (!dbStatus.connected) {
-        console.error('❌ Database connection failed:', dbStatus.error);
-      } else if (!dbStatus.rpcFunctionsExist) {
-        console.warn('⚠️ RPC functions may not be set up. Run database/allow_username_email_check.sql in Supabase SQL Editor');
-      } else {
-        console.log('✅ Database connection and RPC functions are working');
+      try {
+        console.log('🔍 Testing Supabase connection...');
+        const supabaseTest = await testSupabaseConnection();
+        if (supabaseTest.urlReachable) {
+          console.log('✅ Supabase connection OK');
+        } else {
+          console.warn('📴 Cannot reach Supabase - device may be offline');
+        }
+      } catch (error) {
+        console.warn('📴 Connection test skipped - offline');
       }
     };
-    
     testConnection();
   }, []);
 

@@ -358,14 +358,14 @@ class MultiplayerService {
         .select('*')
         .order('created_at', { ascending: false });
 
-      if (error) {
-        console.error('Error fetching rooms:', error);
-        // Return default rooms if database is not set up
+      if (error || !data || !Array.isArray(data)) {
+        if (error) console.error('Error fetching rooms:', error);
+        // Return default rooms if database is not set up or offline
         return this.getDefaultRooms();
       }
 
       // Filter rooms where current_players < max_players
-      const availableRooms = (data || []).filter(
+      const availableRooms = data.filter(
         room => room.current_players < room.max_players
       );
 

@@ -1468,8 +1468,8 @@ export default function OnboardingScreen() {
                   {step === 'language' 
                     ? `Hi ${userName}, I'm Genybot, your AI tutor. What language do you prefer me to talk? 🤖`
                     : (selectedLanguage === 'Bahasa Melayu'
-                      ? `${userName}, bagaimana anda ingin melengkapkan orientasi anda?`
-                      : `${userName}, how would you like to complete your orientation?`)}
+                      ? `There, bagaimana anda ingin melengkapkan orientasi anda?`
+                      : `There, how would you like to complete your orientation?`)}
                 </Text>
                 <View style={styles.speechBubbleTailVibrant} />
               </View>

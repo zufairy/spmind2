@@ -5,6 +5,7 @@ import { supabase } from '../services/supabase';
 import { StarryBackground } from './StarryBackground';
 import { View, Text, StyleSheet } from 'react-native';
 import * as Animatable from 'react-native-animatable';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 interface OnboardingCheckProps {
   children: React.ReactNode;
@@ -12,130 +13,91 @@ interface OnboardingCheckProps {
 
 export const OnboardingCheck: React.FC<OnboardingCheckProps> = ({ children }) => {
   const [hasNavigated, setHasNavigated] = useState(false);
-  const hasNavigatedRef = useRef(false);
+  const navigationDone = useRef(false);
   const router = useRouter();
   
-  // Hooks must be called unconditionally
   const authContext = useAuth();
   const user = authContext?.user || null;
+  const authLoading = authContext?.loading ?? true;
 
   useEffect(() => {
-    // Prevent re-running if already navigated
-    if (hasNavigatedRef.current) {
+    // Prevent multiple navigation attempts
+    if (navigationDone.current) {
+      console.log('✅ OnboardingCheck: Navigation already done, skipping');
       return;
     }
 
-    let forceNavigationTimeout: NodeJS.Timeout | null = null;
-    let noUserTimeout: NodeJS.Timeout | null = null;
-    let navigationCompleted = false;
-
-    // Safe navigation function
     const navigateTo = (route: string) => {
-      if (navigationCompleted || hasNavigatedRef.current) {
-        return;
-      }
+      if (navigationDone.current) return;
+      navigationDone.current = true;
+      console.log(`🚀 OnboardingCheck: Navigating to ${route}`);
+      setHasNavigated(true);
       
-      try {
-        navigationCompleted = true;
-        hasNavigatedRef.current = true;
-        setHasNavigated(true);
-        
-        // Use setTimeout to ensure state is set before navigation
-        setTimeout(() => {
-          try {
-            router.replace(route);
-          } catch (err) {
-            console.error('❌ Router navigation error:', err);
-          }
-        }, 0);
-      } catch (err) {
-        console.error('❌ Navigation setup error:', err);
-        hasNavigatedRef.current = true;
-        setHasNavigated(true);
-      }
+      // Use setTimeout to ensure navigation happens after current render cycle
+      setTimeout(() => {
+        router.replace(route);
+      }, 50);
     };
 
-    // ULTRA-AGGRESSIVE TIMEOUT: Force navigation within 1 second maximum
-    forceNavigationTimeout = setTimeout(() => {
-      if (!hasNavigatedRef.current && !navigationCompleted) {
-        console.warn('⚠️ OnboardingCheck: FORCE NAVIGATION (1s timeout)');
-        if (user) {
-          navigateTo('/onboarding');
-        } else {
-          navigateTo('/auth/login');
-        }
+    // Force navigation after 2 seconds no matter what
+    const forceTimeout = setTimeout(() => {
+      if (!navigationDone.current) {
+        console.warn('⚠️ Force navigating to login after timeout');
+        navigateTo('/auth/login');
       }
-    }, 1000);
+    }, 2000);
 
-    // Quick navigation logic
-    const performNavigation = async () => {
-      try {
-        // If no user after 500ms, go to login
-        noUserTimeout = setTimeout(() => {
-          if (!user && !hasNavigatedRef.current && !navigationCompleted) {
-            console.log('➡️ No user detected, going to login');
+    // If auth is still loading, wait
+    if (authLoading) {
+      console.log('⏳ Waiting for auth...');
+      return () => clearTimeout(forceTimeout);
+    }
+
+    // Navigate based on user state
+    if (!user) {
+      // Check if first-time user should see intro
+      AsyncStorage.getItem('hasSeenIntro')
+        .then((hasSeenIntro) => {
+          clearTimeout(forceTimeout);
+          if (!hasSeenIntro || hasSeenIntro !== 'true') {
+            console.log('👋 No user, first time - showing intro');
+            navigateTo('/intro');
+          } else {
+            console.log('➡️ No user, returning - going to login');
             navigateTo('/auth/login');
-            if (forceNavigationTimeout) clearTimeout(forceNavigationTimeout);
           }
-        }, 500);
-
-        // If we have a user, quickly check onboarding status
-        if (user && user.id) {
-          try {
-            // Super fast query with 500ms timeout
-            const queryPromise = supabase
-              .from('users')
-              .select('onboarding_completed')
-              .eq('id', user.id)
-              .maybeSingle();
-            
-            const fastTimeout = new Promise((_, reject) => 
-              setTimeout(() => reject(new Error('timeout')), 500)
-            );
-            
-            const result = await Promise.race([queryPromise, fastTimeout]) as any;
-            
-            if (noUserTimeout) clearTimeout(noUserTimeout);
-            if (forceNavigationTimeout) clearTimeout(forceNavigationTimeout);
-            
-            if (!hasNavigatedRef.current && !navigationCompleted) {
-              if (result?.data?.onboarding_completed === true) {
-                console.log('✅ Onboarding completed, going to home');
-                navigateTo('/(tabs)/home');
-              } else {
-                console.log('➡️ Needs onboarding or no profile, going to onboarding');
-                navigateTo('/onboarding');
-              }
-            }
-          } catch (error: any) {
-            // Any error = go to onboarding
-            if (noUserTimeout) clearTimeout(noUserTimeout);
-            if (forceNavigationTimeout) clearTimeout(forceNavigationTimeout);
-            
-            if (!hasNavigatedRef.current && !navigationCompleted) {
-              console.log('➡️ Query failed, going to onboarding');
-              navigateTo('/onboarding');
-            }
-          }
-        } else {
-          // No user - will be handled by noUserTimeout
-        }
-      } catch (err) {
-        console.error('❌ Error in performNavigation:', err);
-        if (!hasNavigatedRef.current && !navigationCompleted) {
+        })
+        .catch(() => {
+          clearTimeout(forceTimeout);
+          console.log('➡️ No user, AsyncStorage error - going to login');
           navigateTo('/auth/login');
-        }
-      }
-    };
+        });
+    } else {
+      // Check onboarding status
+      supabase
+        .from('users')
+        .select('onboarding_completed')
+        .eq('id', user.id)
+        .maybeSingle()
+        .then(({ data }) => {
+          clearTimeout(forceTimeout);
+          if (data?.onboarding_completed === true) {
+            console.log('✅ Onboarding done, going to home');
+            navigateTo('/(tabs)/home');
+          } else {
+            console.log('➡️ Needs onboarding');
+            navigateTo('/onboarding');
+          }
+        })
+        .catch(() => {
+          clearTimeout(forceTimeout);
+          console.log('➡️ Query failed, going to onboarding');
+          navigateTo('/onboarding');
+        });
+    }
 
-    // Start navigation check
-    performNavigation();
-
-    return () => {
-      if (forceNavigationTimeout) clearTimeout(forceNavigationTimeout);
-      if (noUserTimeout) clearTimeout(noUserTimeout);
-    };
-  }, [user, router]);
+    return () => clearTimeout(forceTimeout);
+  }, [authLoading, user]); // Removed 'router' from dependencies to prevent re-runs
 
   // Show loading ONLY if we haven't navigated yet
   if (!hasNavigated) {
