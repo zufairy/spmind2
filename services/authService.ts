@@ -157,48 +157,34 @@ class AuthService {
             full_name: profileData.full_name 
           });
           
-          // Add timeout to database insert
-          const insertPromise = supabase
+          // Try insert without select first to see if there's an actual error
+          const { error: insertError } = await supabase
             .from('users')
-            .insert([profileData])
-            .select()
-            .single();
-          
-          const timeoutPromise = new Promise((_, reject) => 
-            setTimeout(() => reject(new Error('Database insert timeout')), 15000)
-          );
-          
-          const { data: insertedProfile, error: profileError } = await Promise.race([
-            insertPromise,
-            timeoutPromise
-          ]) as any;
+            .insert([profileData]);
 
-          if (profileError) {
-            console.error('❌ AuthService: Profile creation error:', profileError);
-            console.error('❌ AuthService: Profile error details:', JSON.stringify(profileError, null, 2));
+          if (insertError) {
+            console.error('❌ AuthService: Profile insert error:', insertError);
+            console.error('❌ AuthService: Insert error details:', JSON.stringify(insertError, null, 2));
             
             // Check if it's a duplicate username/email error
-            const errorMessage = profileError.message?.toLowerCase() || '';
-            const errorCode = profileError.code || '';
+            const errorMessage = insertError.message?.toLowerCase() || '';
+            const errorCode = insertError.code || '';
             
             if (errorMessage.includes('username') && (errorMessage.includes('duplicate') || errorMessage.includes('unique') || errorCode.includes('23505'))) {
-              // Username already exists - can't delete auth user without admin key, but that's okay
-              console.warn('⚠️ AuthService: Username already exists, auth user created but profile failed');
+              console.warn('⚠️ AuthService: Username already exists');
               return { 
                 user: null, 
                 error: { message: 'Username already exists. Please choose a different username.' } as AuthError,
                 needsEmailConfirmation: false
               };
             } else if (errorMessage.includes('email') && (errorMessage.includes('duplicate') || errorMessage.includes('unique') || errorCode.includes('23505'))) {
-              // Email already exists
-              console.warn('⚠️ AuthService: Email already exists, auth user created but profile failed');
+              console.warn('⚠️ AuthService: Email already exists in users table');
               return { 
                 user: null, 
                 error: { message: 'Email already exists. Please use a different email or sign in.' } as AuthError,
                 needsEmailConfirmation: false
               };
             } else if (errorMessage.includes('policy') || errorMessage.includes('row level security') || errorMessage.includes('rls')) {
-              // RLS policy error
               console.error('❌ AuthService: RLS policy error - user may not have permission to insert');
               return { 
                 user: null, 
@@ -210,9 +196,26 @@ class AuthService {
             // For other errors, return the error message
             return { 
               user: null, 
-              error: { message: profileError.message || 'Profile creation failed. Please try again.' } as AuthError,
+              error: { message: insertError.message || 'Profile creation failed. Please try again.' } as AuthError,
               needsEmailConfirmation: false
             };
+          }
+
+          console.log('✅ AuthService: User profile inserted successfully');
+          
+          // Now try to select the profile - if this fails due to RLS, we'll use the profileData we have
+          const { data: selectedProfile, error: selectError } = await supabase
+            .from('users')
+            .select()
+            .eq('id', authData.user.id)
+            .single();
+
+          let insertedProfile = selectedProfile;
+          
+          if (selectError || !selectedProfile) {
+            console.warn('⚠️ AuthService: Could not select profile after insert (likely RLS issue), using inserted data');
+            // Use the data we inserted since we know the insert succeeded
+            insertedProfile = profileData;
           }
 
           console.log('✅ AuthService: User profile created successfully:', insertedProfile.id);

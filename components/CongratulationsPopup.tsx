@@ -268,13 +268,13 @@ const CongratulationsPopup: React.FC<CongratulationsPopupProps> = ({
             </Animated.Text>
           </View>
 
-          {/* Help my homeworks button */}
+          {/* Help with my homework button */}
           <TouchableOpacity
             style={styles.continueButton}
             onPress={handleComplete}
             activeOpacity={0.8}
           >
-            <Text style={styles.continueText}>Help my homeworks</Text>
+            <Text style={styles.continueText}>Help with my homework</Text>
           </TouchableOpacity>
         </LinearGradient>
       </Animated.View>

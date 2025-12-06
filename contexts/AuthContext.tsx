@@ -37,8 +37,16 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   });
   const [needsOnboarding, setNeedsOnboarding] = useState(false);
   const [onboardingChecked, setOnboardingChecked] = useState(false);
+  const authInitialized = React.useRef(false);
 
   useEffect(() => {
+    // Prevent multiple initializations
+    if (authInitialized.current) {
+      console.log('🔐 AuthContext: Already initialized, skipping...');
+      return;
+    }
+    authInitialized.current = true;
+    
     const initializeAuth = async () => {
       try {
         console.log('🔐 AuthContext: Initializing auth...');
@@ -188,11 +196,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       if (error) {
         console.error('❌ AuthContext: Registration error:', error);
         setAuthState(prev => ({ ...prev, loading: false }));
-        return { user: null, error: error.message };
+        // Safely access error message with fallback
+        const errorMessage = error?.message || (typeof error === 'string' ? error : 'Registration failed');
+        return { user: null, error: errorMessage };
       }
 
       if (user) {
-        console.log('✅ AuthContext: Registration successful, user:', user.id);
+        console.log('✅ AuthContext: Registration successful, user:', user?.id || 'no-id');
         const session = await authService.getCurrentSession();
         console.log('📝 AuthContext: Got session:', !!session);
         setAuthState({
@@ -207,10 +217,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       console.warn('⚠️ AuthContext: No user returned from registration');
       setAuthState(prev => ({ ...prev, loading: false }));
       return { user: null, error: 'Registration failed' };
-    } catch (error) {
+    } catch (error: any) {
       console.error('❌ AuthContext: Unexpected registration error:', error);
       setAuthState(prev => ({ ...prev, loading: false }));
-      return { user: null, error: 'An unexpected error occurred' };
+      // Safely extract error message
+      const errorMessage = error?.message || (typeof error === 'string' ? error : 'An unexpected error occurred');
+      return { user: null, error: errorMessage };
     }
   }, []);
 

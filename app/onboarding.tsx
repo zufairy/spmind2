@@ -1280,17 +1280,21 @@ export default function OnboardingScreen() {
     switch (step.type) {
       case 'text':
         return (
-          <Animated.View style={{ opacity: inputOpacity }}>
+          <Animated.View style={{ opacity: inputOpacity, flex: 1 }} pointerEvents="box-none">
             <TextInput
               style={styles.input}
               placeholder={getLocalizedPlaceholder(step, selectedLanguage)}
-              placeholderTextColor="rgba(255, 255, 255, 0.5)"
+              placeholderTextColor="rgba(31, 41, 55, 0.5)"
               value={userResponse}
               onChangeText={setUserResponse}
               autoCapitalize={step.id === 'current_school' ? 'words' : 'sentences'}
               autoCorrect={true}
               autoFocus={false}
+              editable={true}
               returnKeyType="send"
+              onFocus={() => {
+                // Ensure input can receive focus
+              }}
               onSubmitEditing={() => {
                 const currentStepData = onboardingSteps[currentStep];
                 const hasValidInput = currentStepData.type === 'multiselect' 
@@ -1306,13 +1310,15 @@ export default function OnboardingScreen() {
               keyboardType="default"
               textContentType="none"
               clearButtonMode="while-editing"
+              importantForAccessibility="yes"
+              accessibilityLabel="Text input"
             />
           </Animated.View>
         );
       case 'select':
         const localizedOptions = getLocalizedOptions(step, selectedLanguage);
         return (
-          <Animated.View style={[{ opacity: inputOpacity }, styles.optionsContainer]}>
+          <Animated.View style={[{ opacity: inputOpacity, flex: 1 }, styles.optionsContainer]}>
             {localizedOptions.map((option, index) => {
               const originalOption = step.options?.[index] || option;
               return (
@@ -1337,14 +1343,14 @@ export default function OnboardingScreen() {
         );
       case 'date':
         return (
-          <Animated.View style={[{ opacity: inputOpacity }, styles.dateInputContainer]}>
+          <Animated.View style={[{ opacity: inputOpacity, flex: 1 }, styles.dateInputContainer]}>
             <TouchableOpacity 
               style={styles.dateInputButton}
               onPress={() => setShowDatePicker(!showDatePicker)}
             >
               <Text style={[
                 styles.dateInputText,
-                { color: userResponse ? '#FFFFFF' : '#999999' }
+                { color: userResponse ? '#111827' : '#9CA3AF' }
               ]}>
                 {userResponse || step.placeholder}
               </Text>
@@ -1365,7 +1371,7 @@ export default function OnboardingScreen() {
       case 'multiselect':
         const localizedMultiOptions = getLocalizedOptions(step, selectedLanguage);
         return (
-          <Animated.View style={[{ opacity: inputOpacity }, styles.optionsContainer]}>
+          <Animated.View style={[{ opacity: inputOpacity, flex: 1 }, styles.optionsContainer]}>
             {localizedMultiOptions.map((option, index) => {
               const originalOption = step.options?.[index] || option;
               return (
@@ -1468,8 +1474,8 @@ export default function OnboardingScreen() {
                   {step === 'language' 
                     ? `Hi ${userName}, I'm Genybot, your AI tutor. What language do you prefer me to talk? 🤖`
                     : (selectedLanguage === 'Bahasa Melayu'
-                      ? `${userName}, bagaimana anda ingin melengkapkan orientasi anda?`
-                      : `${userName}, how would you like to complete your orientation?`)}
+                      ? `There, bagaimana anda ingin melengkapkan orientasi anda?`
+                      : `There, how would you like to complete your orientation?`)}
                 </Text>
                 <View style={styles.speechBubbleTailVibrant} />
               </View>
@@ -1616,11 +1622,11 @@ export default function OnboardingScreen() {
                       >
                         <Text style={[
                           styles.voiceDateInputText,
-                          { color: userResponse ? '#FFFFFF' : 'rgba(255, 255, 255, 0.6)' }
+                          { color: userResponse ? '#1F2937' : '#6B7280' }
                         ]}>
                           {userResponse || getLocalizedPlaceholder(onboardingSteps[currentStep], selectedLanguage)}
                         </Text>
-                        <Calendar size={20} color="#00FF00" />
+                        <Calendar size={20} color="#7C3AED" />
                       </TouchableOpacity>
                       {showDatePicker && (
                         <DateTimePicker
@@ -1638,7 +1644,7 @@ export default function OnboardingScreen() {
                     <TextInput
                       style={styles.voiceAnswerInput}
                       placeholder={getLocalizedPlaceholder(onboardingSteps[currentStep], selectedLanguage)}
-                      placeholderTextColor="rgba(255, 255, 255, 0.6)"
+                      placeholderTextColor="#6B7280"
                       value={userResponse}
                       onChangeText={setUserResponse}
                       autoCapitalize="words"
@@ -1718,7 +1724,7 @@ export default function OnboardingScreen() {
                     iterationCount="infinite" 
                     duration={1000}
                   >
-                    <Sparkles size={24} color="#FFFFFF" />
+                    <Sparkles size={24} color="#7C3AED" />
                   </Animatable.View>
                   <Text style={styles.voiceProcessingText}>
                     {selectedLanguage === 'Bahasa Melayu' ? 'Memproses...' : 'Processing...'}
@@ -1779,7 +1785,7 @@ export default function OnboardingScreen() {
               </View>
             </Animated.View>
           ) : step === 'chat' ? (
-            // Chat Mode - Minimal Glass Design
+            // Chat Mode - White Background with Vibrant Colors
             <KeyboardAvoidingView 
               style={styles.chatModeContainer}
               behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -2040,10 +2046,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 20,
   },
-  // New Glass Effect Chat Styles
+  // New White Background Chat Styles
   chatModeContainer: {
     flex: 1,
-    backgroundColor: 'transparent',
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 30,
+    borderTopRightRadius: 30,
+    marginTop: 10,
   },
   messagesArea: {
     flex: 1,
@@ -2069,7 +2078,7 @@ const styles = StyleSheet.create({
     width: 24,
     height: 24,
     borderRadius: 12,
-    backgroundColor: 'rgba(0, 255, 0, 0.2)',
+    backgroundColor: '#7C3AED',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 8,
@@ -2080,19 +2089,19 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     paddingHorizontal: 16,
     paddingVertical: 12,
-    backdropFilter: 'blur(10px)',
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.2)',
+    borderWidth: 0,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 3,
   },
   userBubbleGlass: {
-    backgroundColor: 'rgba(0, 255, 0, 0.15)',
-    borderColor: 'rgba(0, 255, 0, 0.3)',
+    backgroundColor: '#C4F0C4',
     borderBottomRightRadius: 4,
   },
   aiBubbleGlass: {
-    backgroundColor: 'rgba(255, 255, 255, 0.08)',
-    borderColor: 'rgba(255, 255, 255, 0.15)',
+    backgroundColor: '#F3E8FF',
     borderBottomLeftRadius: 4,
   },
   messageTextGlass: {
@@ -2101,11 +2110,11 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
   userTextGlass: {
-    color: '#FFFFFF',
+    color: '#1F2937',
     fontWeight: '500',
   },
   aiTextGlass: {
-    color: '#FFFFFF',
+    color: '#1F2937',
   },
   typingWrapper: {
     flexDirection: 'row',
@@ -2156,31 +2165,31 @@ const styles = StyleSheet.create({
   glassInputContainer: {
     paddingHorizontal: 16,
     paddingTop: 8,
-    paddingBottom: Platform.OS === 'ios' ? 8 : 8,
-    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    paddingBottom: Platform.OS === 'ios' ? 20 : 16,
+    backgroundColor: '#FFFFFF',
     borderTopWidth: 1,
-    borderTopColor: 'rgba(255, 255, 255, 0.15)',
-    shadowColor: '#000',
+    borderTopColor: '#E5E7EB',
+    shadowColor: '#7C3AED',
     shadowOffset: { width: 0, height: -1 },
-    shadowOpacity: 0.4,
-    shadowRadius: 4,
-    elevation: 6,
+    shadowOpacity: 0.25,
+    shadowRadius: 6,
+    elevation: 8,
   },
   glassInputWrapper: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.12)',
-    borderRadius: 12,
+    backgroundColor: '#F8F7FF',
+    borderRadius: 14,
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.2)',
+    borderColor: '#E5E7EB',
     minHeight: 40,
     gap: 8,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
+    shadowColor: '#7C3AED',
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.15,
-    shadowRadius: 2,
+    shadowRadius: 4,
     elevation: 2,
   },
   glassSendButton: {
@@ -2191,21 +2200,23 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: 'rgba(0, 255, 0, 0.4)',
-    shadowColor: '#00FF00',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.3,
-    shadowRadius: 2,
-    elevation: 2,
+    borderColor: '#7C3AED',
+    shadowColor: '#7C3AED',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3,
+    elevation: 3,
+    marginLeft: 'auto',
   },
   progressIndicator: {
     alignItems: 'center',
-    marginTop: 4,
+    marginTop: 6,
+    marginBottom: 0,
   },
   progressText: {
     fontSize: 11,
     fontFamily: 'Inter-Medium',
-    color: 'rgba(255, 255, 255, 0.5)',
+    color: '#6B7280',
   },
   // Loading Page Styles
   loadingContainer: {
@@ -2247,10 +2258,11 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 14,
     fontFamily: 'Inter-Regular',
-    color: '#FFFFFF',
-    paddingVertical: 0,
+    color: '#111827',
+    paddingVertical: 8,
+    paddingHorizontal: 0,
     includeFontPadding: false,
-    minHeight: 20,
+    minHeight: 40,
   },
   sendButtonDisabled: {
     opacity: 0.5,
@@ -2260,51 +2272,50 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     gap: 10,
     flex: 1,
-    marginRight: 10,
   },
   optionButton: {
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    borderRadius: 8,
+    backgroundColor: '#F8F7FF',
+    borderRadius: 10,
     paddingHorizontal: 15,
     paddingVertical: 10,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.2)',
+    borderColor: '#E5E7EB',
   },
   optionButtonActive: {
-    backgroundColor: '#00FF00',
-    borderColor: '#00FF00',
+    backgroundColor: '#7C3AED',
+    borderColor: '#7C3AED',
   },
   optionButtonSubmitting: {
     opacity: 0.3,
   },
   optionText: {
-    color: '#FFFFFF',
+    color: '#111827',
     fontFamily: 'Inter-Medium',
     fontSize: 14,
   },
   optionTextActive: {
-    color: '#000000',
+    color: '#FFFFFF',
   },
   dateInputContainer: {
     flex: 1,
-    marginRight: 10,
   },
   dateInputButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: 'rgba(255, 255, 255, 0.12)',
-    borderRadius: 8,
+    backgroundColor: '#F8F7FF',
+    borderRadius: 10,
     paddingHorizontal: 16,
     paddingVertical: 14,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.25)',
+    borderColor: '#E5E7EB',
     minHeight: 52,
   },
   dateInputText: {
     fontSize: 16,
     fontFamily: 'Inter-Regular',
     flex: 1,
+    color: '#111827',
   },
   datePickerContainer: {
     marginTop: 10,
@@ -2316,13 +2327,14 @@ const styles = StyleSheet.create({
   },
   timeContainer: {
     paddingHorizontal: 20,
-    paddingBottom: 16,
+    paddingBottom: Platform.OS === 'ios' ? 40 : 32,
+    paddingTop: 8,
     alignItems: 'center',
   },
   timeText: {
     fontSize: 13,
     fontFamily: 'Inter-Medium',
-    color: 'rgba(255, 255, 255, 0.5)',
+    color: '#1F2937',
     letterSpacing: 0.5,
   },
   // Mode Selection Styles
@@ -2591,7 +2603,12 @@ const styles = StyleSheet.create({
   voiceContainer: {
     flex: 1,
     justifyContent: 'space-between',
-    paddingVertical: 40,
+    paddingTop: 40,
+    paddingBottom: Platform.OS === 'ios' ? 10 : 8,
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 30,
+    borderTopRightRadius: 30,
+    marginTop: 10,
   },
   voiceConversationContainer: {
     maxHeight: 200,
@@ -2635,32 +2652,32 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   voiceAnswerInput: {
-    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    backgroundColor: '#F3F4F6',
     borderRadius: 12,
     paddingHorizontal: 16,
     paddingVertical: 12,
     fontSize: 16,
     fontFamily: 'Inter-Medium',
-    color: '#FFFFFF',
+    color: '#1F2937',
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.3)',
+    borderColor: '#E5E7EB',
     textAlign: 'center',
     minHeight: 50,
   },
   voiceSendButton: {
-    backgroundColor: '#00FF00',
+    backgroundColor: '#7C3AED',
     borderRadius: 12,
     paddingVertical: 14,
     paddingHorizontal: 32,
     alignItems: 'center',
-    shadowColor: '#00FF00',
+    shadowColor: '#7C3AED',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
     elevation: 8,
   },
   voiceSendButtonDisabled: {
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    backgroundColor: '#E5E7EB',
     shadowOpacity: 0,
     elevation: 0,
   },
@@ -2704,12 +2721,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    backgroundColor: '#F3F4F6',
     borderRadius: 12,
     paddingHorizontal: 16,
     paddingVertical: 14,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.3)',
+    borderColor: '#E5E7EB',
     minHeight: 52,
     width: '100%',
   },
@@ -2743,7 +2760,7 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontFamily: 'Inter-SemiBold',
     fontWeight: '600',
-    color: '#FFFFFF',
+    color: '#1F2937',
     textAlign: 'center',
     lineHeight: 28,
   },
@@ -2757,7 +2774,7 @@ const styles = StyleSheet.create({
   },
   voiceProcessingContainer: {
     marginHorizontal: 32,
-    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    backgroundColor: '#F3F4F6',
     borderRadius: 12,
     padding: 12,
     flexDirection: 'row',
@@ -2768,7 +2785,7 @@ const styles = StyleSheet.create({
   voiceProcessingText: {
     fontSize: 14,
     fontFamily: 'Inter-Medium',
-    color: '#FFFFFF',
+    color: '#1F2937',
   },
   voiceResponseText: {
     fontSize: 18,
@@ -2862,7 +2879,7 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontFamily: 'Inter-Medium',
     fontWeight: '500',
-    color: 'rgba(255, 255, 255, 0.8)',
+    color: '#1F2937',
     textAlign: 'center',
   },
   voiceOptionsContainer: {
@@ -2877,17 +2894,17 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   voiceOptionButton: {
-    backgroundColor: 'rgba(255, 255, 255, 0.12)',
+    backgroundColor: '#F3F4F6',
     borderRadius: 12,
     paddingHorizontal: 20,
     paddingVertical: 14,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.25)',
+    borderColor: '#E5E7EB',
     minWidth: 100,
   },
   voiceOptionButtonActive: {
-    backgroundColor: '#00FF00',
-    borderColor: '#00FF00',
+    backgroundColor: '#7C3AED',
+    borderColor: '#7C3AED',
   },
   voiceOptionButtonSubmitting: {
     opacity: 0.3,
@@ -2895,25 +2912,25 @@ const styles = StyleSheet.create({
   voiceOptionText: {
     fontSize: 15,
     fontFamily: 'Inter-Medium',
-    color: '#FFFFFF',
+    color: '#1F2937',
     textAlign: 'center',
   },
   voiceOptionTextActive: {
     color: '#000000',
   },
   voiceSubmitButton: {
-    backgroundColor: '#00FF00',
+    backgroundColor: '#7C3AED',
     borderRadius: 12,
     paddingHorizontal: 48,
     paddingVertical: 16,
-    shadowColor: '#00FF00',
+    shadowColor: '#7C3AED',
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.5,
     shadowRadius: 12,
     elevation: 10,
   },
   voiceSubmitButtonDisabled: {
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    backgroundColor: '#E5E7EB',
     shadowOpacity: 0,
   },
   voiceSubmitButtonText: {

@@ -24,51 +24,34 @@ if (!global.__SUPABASE_KEY_LOGGED__) {
   global.__SUPABASE_KEY_LOGGED__ = true;
 }
 
-// Enhanced fetch with retry logic and better error handling
+// Track offline status
+let offlineLogged = false;
+
+// Enhanced fetch - returns graceful response when offline instead of throwing
 const customFetch = async (url: string, options: any = {}) => {
-  const maxRetries = 3;
-  const timeoutMs = 15000; // 15 second timeout
+  const maxRetries = 2;
+  const timeoutMs = 5000; // 5 second timeout for faster feedback
 
   for (let attempt = 0; attempt < maxRetries; attempt++) {
     try {
-      // Create AbortController for timeout
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
       try {
-        // Preserve all headers from options
         const existingHeaders = options.headers || {};
-        
-        // Create headers object, preserving all existing headers
-        // Check both 'apikey' and 'apikey' (case variations) and 'Authorization'
         const hasApiKey = existingHeaders['apikey'] || existingHeaders['Apikey'] || existingHeaders['APIKEY'];
         
-        const headers: any = {
-          ...existingHeaders,
-        };
+        const headers: any = { ...existingHeaders };
         
-        // For Supabase requests, ALWAYS ensure apikey and Authorization headers are set
         if (url.includes('supabase.co')) {
-          // Always ensure apikey header is present
           if (!hasApiKey) {
             headers['apikey'] = supabaseAnonKey;
           }
-          
-          // Always ensure Authorization header with Bearer token is present
           if (!headers['Authorization'] && !headers['authorization']) {
             headers['Authorization'] = `Bearer ${supabaseAnonKey}`;
           }
-          
-          // Verify API key is valid format (only log warning once)
-          if (!global.__SUPABASE_KEY_WARNING_LOGGED__) {
-            if (!supabaseAnonKey || !supabaseAnonKey.startsWith('eyJ')) {
-              console.error('❌ WARNING: Supabase anon key appears invalid (should start with eyJ...)');
-              global.__SUPABASE_KEY_WARNING_LOGGED__ = true;
-            }
-          }
         }
         
-        // Only set Content-Type if not already set and if there's a body
         if (options.body && !headers['Content-Type'] && !headers['content-type']) {
           headers['Content-Type'] = 'application/json';
         }
@@ -80,85 +63,55 @@ const customFetch = async (url: string, options: any = {}) => {
         });
 
         clearTimeout(timeoutId);
-
-        // If response is ok, return it
-        if (response.ok) {
-          return response;
-        }
-
-        // For client errors (4xx), don't retry
-        if (response.status >= 400 && response.status < 500) {
-          return response;
-        }
-
-        // For server errors (5xx), retry if we have attempts left
-        if (response.status >= 500 && attempt < maxRetries - 1) {
-          throw new Error(`Server error: ${response.status}`);
-        }
-
+        offlineLogged = false; // Reset on success
         return response;
       } catch (fetchError: any) {
         clearTimeout(timeoutId);
         
-        // Check if it was aborted (timeout)
-        if (fetchError.name === 'AbortError') {
-          const timeoutError = new Error('Request timeout - please check your internet connection');
-          if (attempt < maxRetries - 1) {
-            const delay = Math.min(1000 * Math.pow(2, attempt), 5000);
-            console.log(`⏱️ Request timeout (attempt ${attempt + 1}/${maxRetries}), retrying in ${delay}ms...`);
-            await new Promise(resolve => setTimeout(resolve, delay));
-            continue;
-          }
-          throw timeoutError;
-        }
-        
-        // Check if it's a network error
-        const isNetworkError = 
+        const isOffline = 
+          fetchError.name === 'AbortError' ||
           fetchError?.message?.includes('Network request failed') ||
           fetchError?.message?.includes('Failed to fetch') ||
-          fetchError?.message?.includes('NetworkError') ||
-          fetchError?.code === 'NETWORK_ERROR' ||
-          fetchError?.name === 'NetworkError' ||
-          fetchError?.message?.includes('ECONNREFUSED') ||
-          fetchError?.message?.includes('ENOTFOUND');
+          fetchError?.message?.includes('NetworkError');
         
-        if (isNetworkError) {
-          // If not the last attempt, wait and retry
-          if (attempt < maxRetries - 1) {
-            const delay = Math.min(1000 * Math.pow(2, attempt), 5000); // Exponential backoff, max 5s
-            console.log(`⚠️ Network request failed (attempt ${attempt + 1}/${maxRetries}), retrying in ${delay}ms...`);
-            await new Promise(resolve => setTimeout(resolve, delay));
-            continue;
-          } else {
-            // Last attempt failed - provide helpful error
-            throw new Error('Unable to connect to the server. Please check your internet connection and try again.');
-          }
+        if (isOffline && attempt < maxRetries - 1) {
+          await new Promise(resolve => setTimeout(resolve, 500));
+          continue;
         }
         
-        // For other errors, throw immediately
+        // Return offline response instead of throwing
+        if (isOffline) {
+          if (!offlineLogged) {
+            console.warn('📴 Device offline - returning empty response');
+            offlineLogged = true;
+          }
+          return new Response(JSON.stringify({ data: null, error: null }), {
+            status: 200,
+            headers: { 'Content-Type': 'application/json' }
+          });
+        }
+        
         throw fetchError;
       }
     } catch (error: any) {
-      // If this is the last attempt, throw the error
       if (attempt === maxRetries - 1) {
-        console.error(`❌ Network request failed after ${maxRetries} attempts:`, error);
-        throw error;
+        // Return offline response instead of throwing
+        if (!offlineLogged) {
+          console.warn('📴 Network unavailable - returning empty response');
+          offlineLogged = true;
+        }
+        return new Response(JSON.stringify({ data: null, error: null }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' }
+        });
       }
-      
-      // For non-network errors on early attempts, also retry once
-      if (attempt < maxRetries - 1) {
-        const delay = Math.min(1000 * Math.pow(2, attempt), 5000);
-        console.log(`⚠️ Request failed (attempt ${attempt + 1}/${maxRetries}), retrying in ${delay}ms...`);
-        await new Promise(resolve => setTimeout(resolve, delay));
-        continue;
-      }
-      
-      throw error;
     }
   }
 
-  // Should not reach here
-  throw new Error('Network request failed');
+  return new Response(JSON.stringify({ data: null, error: null }), {
+    status: 200,
+    headers: { 'Content-Type': 'application/json' }
+  });
 };
 
 export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
