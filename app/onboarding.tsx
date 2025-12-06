@@ -437,8 +437,8 @@ export default function OnboardingScreen() {
         // Use the first onboarding question in the selected language
         const firstQuestion = getLocalizedQuestion(onboardingSteps[0], selectedLanguage);
         const greeting = selectedLanguage === 'Bahasa Melayu' 
-          ? `Hai ${displayName}! Saya Genybot, AI tutor awak! 👋 ${firstQuestion}`
-          : `Hi ${displayName}! I'm Genybot, your AI study buddy! 👋 ${firstQuestion}`;
+          ? `Hai ${displayName}! Saya Tigeria, AI tutor awak! 👋 ${firstQuestion}`
+          : `Hi ${displayName}! I'm Tigeria, your AI study buddy! 👋 ${firstQuestion}`;
         
         const initialMessage: Message = {
           type: 'ai',
@@ -469,8 +469,8 @@ export default function OnboardingScreen() {
         const displayName = userName || 'there';
         const firstQuestion = getLocalizedQuestion(onboardingSteps[0], selectedLanguage);
         const greeting = selectedLanguage === 'Bahasa Melayu' 
-          ? `Hai ${displayName}! Saya Genybot, kawan AI awak! 👋 ${firstQuestion}`
-          : `Hi ${displayName}! I'm Genybot, your AI buddy! 👋 ${firstQuestion}`;
+          ? `Hai ${displayName}! Saya Tigeria, kawan AI awak! 👋 ${firstQuestion}`
+          : `Hi ${displayName}! I'm Tigeria, your AI buddy! 👋 ${firstQuestion}`;
         
         const initialMessage: Message = {
           type: 'ai',
@@ -1416,7 +1416,7 @@ export default function OnboardingScreen() {
             {/* Profile Picture - Left */}
             <View style={styles.profilePicContainer}>
               <Image 
-                source={require('../assets/images/square.png')}
+                source={require('../assets/images/Logo Square (1).png')}
                 style={styles.profilePic}
                 resizeMode="cover"
               />
@@ -1427,7 +1427,7 @@ export default function OnboardingScreen() {
               <Text style={styles.headerTitle}>Orientation Time</Text>
               <View style={styles.onlineIndicator}>
                 <View style={styles.onlineDot} />
-                <Text style={styles.onlineText}>Genybot</Text>
+                <Text style={styles.onlineText}>Tigeria</Text>
               </View>
             </View>
             
@@ -1472,7 +1472,7 @@ export default function OnboardingScreen() {
               <View style={styles.speechBubbleCentered}>
                 <Text style={styles.speechBubbleTextVibrant} numberOfLines={4}>
                   {step === 'language' 
-                    ? `Hi ${userName}, I'm Genybot, your AI tutor. What language do you prefer me to talk? 🤖`
+                    ? `Hi ${userName}, I'm Tigeria, your AI tutor. What language do you prefer me to talk? 🤖`
                     : (selectedLanguage === 'Bahasa Melayu'
                       ? `There, bagaimana anda ingin melengkapkan orientasi anda?`
                       : `There, how would you like to complete your orientation?`)}
@@ -1564,8 +1564,8 @@ export default function OnboardingScreen() {
               <View style={styles.loadingContent}>
                 <Text style={styles.loadingTitle}>
                   {selectedLanguage === 'Bahasa Melayu' 
-                    ? 'Menyediakan Genybot...' 
-                    : 'Preparing Genybot...'}
+                    ? 'Menyediakan Tigeria...' 
+                    : 'Preparing Tigeria...'}
                 </Text>
                 <Text style={styles.loadingSubtitle}>
                   {selectedLanguage === 'Bahasa Melayu' 
@@ -1813,8 +1813,8 @@ export default function OnboardingScreen() {
                     <View style={styles.aiBubbleGlass}>
                       <Text style={styles.aiTextGlass}>
                         {selectedLanguage === 'Bahasa Melayu' 
-                          ? 'Hi! Saya Genybot, AI tutor anda! 👋 Mari kita berkenalan!'
-                          : 'Hi! I\'m Genybot, your AI study buddy! 👋 Let\'s get to know each other!'}
+                          ? 'Hi! Saya Tigeria, AI tutor anda! 👋 Mari kita berkenalan!'
+                          : 'Hi! I\'m Tigeria, your AI study buddy! 👋 Let\'s get to know each other!'}
                       </Text>
                     </View>
                   </Animatable.View>
