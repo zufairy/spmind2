@@ -1,0 +1,1910 @@
+import React, { useState, useEffect, useRef } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  TextInput,
+  TouchableOpacity,
+  KeyboardAvoidingView,
+  Platform,
+  Dimensions,
+  Image,
+  Alert,
+  Animated,
+  SafeAreaView,
+  Modal,
+} from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
+import { useRouter } from 'expo-router';
+import { useAuth } from '../contexts/AuthContext';
+import { supabase } from '../services/supabase';
+import { LoadingSpinner } from '../components/LoadingSpinner';
+import { BlurView } from 'expo-blur';
+import { StarryBackground } from '../components/StarryBackground';
+// import DatePicker from 'react-native-modern-datepicker';
+// import moment from 'moment';
+import { ArrowLeft, Send, Mic, Volume2, Sparkles, Calendar, MessageCircle, MicOff } from 'lucide-react-native';
+import * as Animatable from 'react-native-animatable';
+import TutorpalAvatar from '../components/TutorpalAvatar';
+import { voiceService } from '../services/voiceService';
+import { elevenLabsVoiceService } from '../services/googleVoiceService';
+import DateTimePicker from '@react-native-community/datetimepicker';
+
+const { width } = Dimensions.get('window');
+
+interface Message {
+  type: 'ai' | 'user';
+  message: string;
+  timestamp: Date;
+  hasAudio?: boolean;
+}
+
+interface OnboardingStep {
+  id: string;
+  question: string;
+  type: 'text' | 'select' | 'date' | 'multiselect';
+  options?: string[];
+  placeholder?: string;
+  validation?: (value: string) => string | null;
+}
+
+const onboardingSteps: OnboardingStep[] = [
+  {
+    id: 'intro',
+    question: "Hello there! I'm Genius, your personal AI tutor. I'm here to help you get started on your learning journey. What's your name?",
+    type: 'text',
+    placeholder: 'Your Name',
+    validation: (value: string) => {
+      if (!value.trim()) return 'Please enter your name.';
+      if (value.trim().length < 2) return 'Name must be at least 2 characters long.';
+      return null;
+    },
+  },
+  {
+    id: 'preferred_language',
+    question: "Nice to meet you! To make our conversations smoother, what's your preferred language for learning?",
+    type: 'select',
+    options: ['English', 'Bahasa Melayu', 'Mandarin', 'Tamil'],
+  },
+  {
+    id: 'current_school',
+    question: "Great! Which school are you currently attending?",
+    type: 'text',
+    placeholder: 'Your School Name',
+  },
+  {
+    id: 'birth_date',
+    question: "Understood. To personalize your learning experience, could you please tell me your birth date?",
+    type: 'date',
+    placeholder: 'YYYY-MM-DD',
+    validation: (value: string) => {
+      if (!value.trim()) return 'Please select your birth date.';
+      const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+      if (!dateRegex.test(value)) return 'Please enter a valid date in YYYY-MM-DD format.';
+      const birthDate = new Date(value);
+      const today = new Date();
+      const age = today.getFullYear() - birthDate.getFullYear();
+      if (age < 5 || age > 100) return 'Please enter a valid birth date.';
+      if (birthDate > today) return 'Birth date cannot be in the future.';
+      return null;
+    },
+  },
+  {
+    id: 'weak_subjects',
+    question: "Thanks! Now, let's talk about subjects. Which subjects do you find challenging or would like to improve in?",
+    type: 'multiselect',
+    options: ['Mathematics', 'Science', 'English', 'Bahasa Melayu', 'History', 'Physics', 'Chemistry', 'Biology', 'Add Maths'],
+  },
+  {
+    id: 'strong_subjects',
+    question: "And on the flip side, which subjects are you confident in or enjoy the most?",
+    type: 'multiselect',
+    options: ['Mathematics', 'Science', 'English', 'Bahasa Melayu', 'History', 'Physics', 'Chemistry', 'Biology', 'Add Maths'],
+  },
+  {
+    id: 'study_hours_per_day',
+    question: "How many hours do you typically prefer to study per day?",
+    type: 'select',
+    options: ['< 1 hour', '1-2 hours', '2-3 hours', '3-4 hours', '> 4 hours'],
+  },
+  {
+    id: 'academic_goals',
+    question: "Finally, what are your main academic goals or what do you hope to achieve with Genius?",
+    type: 'text',
+    placeholder: 'e.g., Improve grades, prepare for exams, learn new skills',
+  },
+];
+
+export default function OnboardingScreen() {
+  const router = useRouter();
+  const { user, updateProfile, refreshAuth } = useAuth();
+  const [step, setStep] = useState<'language' | 'modeSelection' | 'chat' | 'voice'>('language');
+  const [selectedLanguage, setSelectedLanguage] = useState<string>('');
+  const [userName, setUserName] = useState<string>('');
+  const [currentStep, setCurrentStep] = useState(0);
+  const [conversationHistory, setConversationHistory] = useState<Message[]>([]);
+  const [userResponse, setUserResponse] = useState('');
+  const [onboardingData, setOnboardingData] = useState<any>({});
+  const [aiTyping, setAiTyping] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [isRecording, setIsRecording] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [avatarState, setAvatarState] = useState<'idle' | 'talking' | 'listening' | 'thoughtful'>('talking');
+  const scrollViewRef = useRef<ScrollView>(null);
+  const pageFadeAnim = useRef(new Animated.Value(0)).current;
+  const modeOpacity = useRef(new Animated.Value(1)).current;
+  const contentSlide = useRef(new Animated.Value(0)).current;
+
+  // Multi-select state
+  const [selectedMultiOptions, setSelectedMultiOptions] = useState<string[]>([]);
+  
+  // Date picker state
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [selectedDate, setSelectedDate] = useState(new Date());
+
+  useEffect(() => {
+    Animated.timing(pageFadeAnim, {
+      toValue: 1,
+      duration: 300,
+      useNativeDriver: true,
+    }).start();
+
+    // Fetch user name from database and play greeting
+    const initializeOnboarding = async () => {
+      try {
+        // Get user data from Supabase
+        const { data: { session } } = await supabase.auth.getSession();
+        const userId = user?.id || session?.user?.id;
+        
+        if (userId) {
+          // Fetch user profile from database
+          const { data: userData, error } = await supabase
+            .from('users')
+            .select('full_name, username')
+            .eq('id', userId)
+            .single();
+            
+          if (userData && !error) {
+            const name = userData.full_name?.split(' ')[0] || userData.username || user?.email?.split('@')[0] || 'there';
+            setUserName(name);
+            
+            // Play greeting with ElevenLabs using the fetched name
+            const greeting = `Hi ${name}, I'm Genybot, I will help you to register. Please select a language.`;
+            setAvatarState('talking');
+            
+            const result = await elevenLabsVoiceService.generateSpeech(greeting);
+            if (result.success && result.audioUrl) {
+              await elevenLabsVoiceService.playAudio(result.audioUrl);
+            }
+            
+            setAvatarState('idle');
+          } else {
+            // Fallback to context user data
+            const name = user?.full_name?.split(' ')[0] || user?.username || 'there';
+            setUserName(name);
+          }
+        }
+      } catch (error) {
+        console.error('Error initializing onboarding:', error);
+        const name = user?.full_name?.split(' ')[0] || 'there';
+        setUserName(name);
+      }
+    };
+
+    initializeOnboarding();
+  }, []);
+
+  const handleLanguageSelection = async (language: string) => {
+    setSelectedLanguage(language);
+    
+    // Beautiful fade out animation
+    Animated.parallel([
+      Animated.timing(modeOpacity, {
+        toValue: 0,
+        duration: 400,
+        useNativeDriver: true,
+      }),
+      Animated.timing(contentSlide, {
+        toValue: -30,
+        duration: 400,
+        useNativeDriver: true,
+      }),
+    ]).start(async () => {
+      setStep('modeSelection');
+      contentSlide.setValue(60);
+      
+      // Beautiful fade in and slide up animation
+      Animated.parallel([
+        Animated.timing(modeOpacity, {
+          toValue: 1,
+          duration: 600,
+          useNativeDriver: true,
+        }),
+        Animated.spring(contentSlide, {
+          toValue: 0,
+          tension: 40,
+          friction: 9,
+          useNativeDriver: true,
+        }),
+      ]).start();
+      
+      // Play voice greeting in selected language
+      const greetings: { [key: string]: string } = {
+        'English': `${userName}, do you prefer to use chat, or want to talk with me via voice?`,
+        'Bahasa Melayu': `${userName}, adakah anda lebih suka menggunakan chat, atau mahu bercakap dengan saya melalui suara?`,
+      };
+      
+      const greeting = greetings[language] || greetings['English'];
+      setAvatarState('talking');
+      
+      try {
+        const result = await elevenLabsVoiceService.generateSpeech(greeting, language === 'Bahasa Melayu' ? 'ms' : 'en');
+        if (result.success && result.audioUrl) {
+          await elevenLabsVoiceService.playAudio(result.audioUrl);
+        }
+      } catch (error) {
+        console.error('Error playing mode selection greeting:', error);
+      } finally {
+        setAvatarState('idle');
+      }
+    });
+  };
+
+  const handleModeSelection = (selectedMode: 'chat' | 'voice') => {
+    // Animate mode selection out
+    Animated.parallel([
+      Animated.timing(modeOpacity, {
+        toValue: 0,
+        duration: 200,
+        useNativeDriver: true,
+      }),
+    ]).start(() => {
+      setStep(selectedMode);
+      contentSlide.setValue(50);
+      
+      // Initialize conversation with the first AI message if chat mode
+      if (selectedMode === 'chat' && conversationHistory.length === 0) {
+        const initialMessage: Message = {
+          type: 'ai',
+          message: onboardingSteps[0].question,
+          timestamp: new Date(),
+          hasAudio: true,
+        };
+        setConversationHistory([initialMessage]);
+        generateAndPlaySpeech(onboardingSteps[0].question);
+      }
+      
+      // Animate content in
+      Animated.parallel([
+        Animated.timing(modeOpacity, {
+          toValue: 1,
+          duration: 300,
+          useNativeDriver: true,
+        }),
+        Animated.spring(contentSlide, {
+          toValue: 0,
+          tension: 50,
+          friction: 8,
+          useNativeDriver: true,
+        }),
+      ]).start();
+    });
+  };
+
+  useEffect(() => {
+    // Scroll to bottom when conversation updates
+    if (scrollViewRef.current) {
+      scrollViewRef.current.scrollToEnd({ animated: true });
+    }
+  }, [conversationHistory]);
+
+  const generateAndPlaySpeech = async (text: string) => {
+    try {
+      setAvatarState('talking');
+      const result = await voiceService.generateSpeech(text);
+      if (result.success && result.audioUrl) {
+        await voiceService.playAudio(result.audioUrl);
+      }
+    } catch (error) {
+      console.error('Error generating speech:', error);
+    } finally {
+      setAvatarState('idle');
+    }
+  };
+
+  const handleMicPressIn = async () => {
+    setIsRecording(true);
+    setAvatarState('listening');
+    await voiceService.startRecording();
+  };
+
+  const handleMicPressOut = async () => {
+    setIsRecording(false);
+    setIsProcessing(true);
+    setAvatarState('thoughtful');
+    
+    const result = await voiceService.stopRecording();
+    if (result.success && result.transcription) {
+      setUserResponse(result.transcription);
+      setIsProcessing(false);
+      setAvatarState('idle');
+      // Auto-submit after voice input
+      setTimeout(() => {
+        handleNextStep();
+      }, 500);
+    } else {
+      setIsProcessing(false);
+      setAvatarState('idle');
+    }
+  };
+
+  const validateInput = (step: OnboardingStep, value: string, multiOptions?: string[]): string | null => {
+    // Use step's validation function if available
+    if (step.validation) {
+      return step.validation(value);
+    }
+
+    // Fallback validation for steps without custom validation
+    switch (step.id) {
+      case 'current_school':
+        if (!value.trim()) return 'Please enter your school name.';
+        if (value.trim().length < 3) return 'School name must be at least 3 characters long.';
+        return null;
+      
+      case 'academic_goals':
+        if (!value.trim()) return 'Please describe your academic goals.';
+        if (value.trim().length < 10) return 'Please provide more details about your academic goals (at least 10 characters).';
+        return null;
+      
+      case 'weak_subjects':
+      case 'strong_subjects':
+        if (!multiOptions || multiOptions.length === 0) return 'Please select at least one subject.';
+        return null;
+      
+      default:
+        if (!value.trim()) return 'Please provide a response.';
+        return null;
+    }
+  };
+
+  const handleNextStep = async () => {
+    const currentStepData = onboardingSteps[currentStep];
+    
+    // Validate input based on step type
+    const validationError = validateInput(
+      currentStepData, 
+      userResponse, 
+      currentStepData.type === 'multiselect' ? selectedMultiOptions : undefined
+    );
+    
+    if (validationError) {
+      Alert.alert('Invalid Input', validationError);
+      return;
+    }
+
+    setAiTyping(true);
+    setAvatarState('thoughtful');
+
+    const newUserMessage: Message = {
+      type: 'user',
+      message: onboardingSteps[currentStep].type === 'multiselect' ? selectedMultiOptions.join(', ') : userResponse,
+      timestamp: new Date(),
+    };
+
+    const newConversation = [...conversationHistory, newUserMessage];
+    setConversationHistory(newConversation);
+
+    const stepData = {
+      ...onboardingData,
+      [onboardingSteps[currentStep].id]: onboardingSteps[currentStep].type === 'multiselect' ? selectedMultiOptions : userResponse,
+    };
+    setOnboardingData(stepData);
+
+    // Simulate AI processing
+    setTimeout(async () => {
+      setAiTyping(false);
+      setAvatarState('idle');
+
+      if (currentStep < onboardingSteps.length - 1) {
+        // Move to next step
+        const nextStep = currentStep + 1;
+        setCurrentStep(nextStep);
+
+        // Add AI response for next step
+        const aiResponse: Message = {
+          type: 'ai',
+          message: onboardingSteps[nextStep].question,
+          timestamp: new Date(),
+          hasAudio: true,
+        };
+
+        setConversationHistory([...newConversation, aiResponse]);
+        setUserResponse('');
+        setSelectedMultiOptions([]); // Clear multi-select for next step
+        
+        // Generate speech for next question
+        generateAndPlaySpeech(onboardingSteps[nextStep].question);
+      } else {
+        // Complete onboarding
+        await completeOnboarding(stepData);
+      }
+    }, 2000);
+  };
+
+  const completeOnboarding = async (data: any) => {
+    setLoading(true);
+    try {
+      // Try to refresh auth first if user is null
+      if (!user) {
+        console.log('User not found in context, refreshing auth state...');
+        await refreshAuth();
+        
+        // Check session directly from Supabase as a fallback
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session?.user) {
+          Alert.alert('Error', 'User not authenticated. Please log in again.');
+          router.replace('/auth/login');
+          return;
+        }
+      }
+
+      // Get current user ID from either context or session
+      const { data: { session } } = await supabase.auth.getSession();
+      const userId = user?.id || session?.user?.id;
+
+      if (!userId) {
+        Alert.alert('Error', 'Unable to identify user. Please log in again.');
+        router.replace('/auth/login');
+        return;
+      }
+
+      // Calculate age from birth date
+      let calculatedAge = 0;
+      if (data.birth_date) {
+        const birthDate = new Date(data.birth_date);
+        const today = new Date();
+        calculatedAge = today.getFullYear() - birthDate.getFullYear();
+      }
+
+      // Map study hours text to integer values
+      const mapStudyHours = (hoursText: string) => {
+        switch (hoursText) {
+          case '< 1 hour': return 1;
+          case '1-2 hours': return 2;
+          case '2-3 hours': return 3;
+          case '3-4 hours': return 4;
+          case '> 4 hours': return 5;
+          default: return 2; // Default to 2 hours
+        }
+      };
+
+      // Map preferred language to database constraint values
+      const mapPreferredLanguage = (language: string) => {
+        const lang = language?.toLowerCase() || 'english';
+        switch (lang) {
+          case 'bahasa melayu':
+          case 'bahasa_melayu':
+          case 'malay':
+            return 'malay';
+          case 'english':
+            return 'english';
+          case 'mandarin':
+          case 'tamil':
+          case 'mixed':
+            return 'mixed';
+          default:
+            return 'english';
+        }
+      };
+
+      // Prepare the update data
+      const updateData = {
+        // Map onboarding fields to correct database columns
+        full_name: data.intro || '', // The name from intro step
+        preferred_language: mapPreferredLanguage(data.preferred_language),
+        school: data.current_school || '', // Map current_school to school field
+        birth_date: data.birth_date || '',
+        age: calculatedAge || 0,
+        weak_subjects: data.weak_subjects || [],
+        strong_subjects: data.strong_subjects || [],
+        study_hours_per_day: mapStudyHours(data.study_hours_per_day),
+        academic_goals: data.academic_goals || '',
+        onboarding_completed: true,
+        onboarding_data: data, // Store complete onboarding data as JSON
+      };
+
+      console.log('Updating user profile with data:', updateData);
+      console.log('User ID:', userId);
+
+      // Update user profile in Supabase directly to be safe
+      const { data: updateResult, error: profileError } = await supabase
+        .from('users')
+        .update(updateData)
+        .eq('id', userId)
+        .select();
+
+      if (profileError) {
+        console.error('Error updating profile during onboarding:', profileError);
+        console.error('Profile error details:', {
+          code: profileError.code,
+          message: profileError.message,
+          details: profileError.details,
+          hint: profileError.hint
+        });
+        Alert.alert('Error', `Failed to save onboarding data: ${profileError.message}. Please try again.`);
+        setLoading(false);
+        return;
+      }
+
+      console.log('Profile updated successfully:', updateResult);
+
+      // Refresh auth state to load updated profile
+      await refreshAuth();
+      
+      Alert.alert(
+        'Welcome!', 
+        'Onboarding complete! Enjoy your learning journey with Genius!',
+        [
+          {
+            text: 'Get Started',
+            onPress: () => {
+              // Navigate to home screen
+              router.replace('/(tabs)/home');
+            }
+          }
+        ]
+      );
+      
+      // Also navigate after a short delay in case alert is dismissed
+      setTimeout(() => {
+        router.replace('/(tabs)/home');
+      }, 2000);
+    } catch (error: any) {
+      console.error('Onboarding completion error:', error);
+      Alert.alert('Error', error.message || 'An unexpected error occurred during onboarding.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+
+  const handleMultiOptionToggle = (option: string) => {
+    setSelectedMultiOptions((prev) =>
+      prev.includes(option) ? prev.filter((item) => item !== option) : [...prev, option]
+    );
+  };
+
+  const handleDateChange = (event: any, date?: Date) => {
+    // Don't close the picker automatically - let user keep selecting
+    if (date) {
+      setSelectedDate(date);
+      // Format date as YYYY-MM-DD for display (but don't set as response yet)
+      const formattedDate = date.toISOString().split('T')[0];
+      // Only update display, don't close picker
+      setUserResponse(formattedDate);
+    }
+  };
+
+  const confirmDateSelection = () => {
+    // Close picker when user confirms by pressing send button
+    setShowDatePicker(false);
+  };
+
+  const playAudio = async (messageIndex: string) => {
+    const index = parseInt(messageIndex);
+    const message = conversationHistory[index];
+    if (message && message.hasAudio) {
+      setIsPlaying(true);
+      await generateAndPlaySpeech(message.message);
+      setIsPlaying(false);
+    }
+  };
+
+  const renderInput = () => {
+    const step = onboardingSteps[currentStep];
+    switch (step.type) {
+      case 'text':
+        return (
+          <TextInput
+            style={styles.input}
+            placeholder={step.placeholder}
+            placeholderTextColor="#999999"
+            value={userResponse}
+            onChangeText={setUserResponse}
+            autoCapitalize={step.id === 'current_school' ? 'words' : 'sentences'}
+          />
+        );
+      case 'select':
+    return (
+          <View style={styles.optionsContainer}>
+            {step.options?.map((option) => (
+              <TouchableOpacity
+                key={option}
+                style={[
+                  styles.optionButton,
+                  userResponse === option && styles.optionButtonActive,
+                ]}
+                onPress={() => setUserResponse(option)}
+              >
+                <Text style={[
+                  styles.optionText,
+                  userResponse === option && styles.optionTextActive,
+                ]}>
+                  {option}
+                </Text>
+              </TouchableOpacity>
+            ))}
+            </View>
+        );
+      case 'date':
+        return (
+          <View style={styles.dateInputContainer}>
+            <TouchableOpacity 
+              style={styles.dateInputButton}
+              onPress={() => setShowDatePicker(!showDatePicker)}
+            >
+              <Text style={[
+                styles.dateInputText,
+                { color: userResponse ? '#FFFFFF' : '#999999' }
+              ]}>
+                {userResponse || step.placeholder}
+              </Text>
+              <Calendar size={20} color="#00FF00" />
+            </TouchableOpacity>
+            {showDatePicker && (
+              <DateTimePicker
+                value={selectedDate}
+                mode="date"
+                display="spinner"
+                maximumDate={new Date()} // Don't allow future dates
+                minimumDate={new Date(1900, 0, 1)} // Reasonable minimum date
+                onChange={handleDateChange}
+              />
+            )}
+          </View>
+        );
+      case 'multiselect':
+        return (
+          <View style={styles.optionsContainer}>
+            {step.options?.map((option) => (
+              <TouchableOpacity
+                key={option}
+                style={[
+                  styles.optionButton,
+                  selectedMultiOptions.includes(option) && styles.optionButtonActive,
+                ]}
+                onPress={() => handleMultiOptionToggle(option)}
+              >
+                <Text style={[
+                  styles.optionText,
+                  selectedMultiOptions.includes(option) && styles.optionTextActive,
+                ]}>
+                  {option}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+    );
+      default:
+        return null;
+    }
+  };
+
+  return (
+    <Animated.View style={[styles.container, { opacity: pageFadeAnim }]}>
+      <View style={styles.backgroundContainer}>
+        <StarryBackground />
+        <SafeAreaView style={styles.safeArea}>
+          {/* Header */}
+          <View style={styles.header}>
+            {/* Profile Picture - Left */}
+            <View style={styles.profilePicContainer}>
+              <Image 
+                source={require('../assets/images/sprite1.png')}
+                style={styles.profilePic}
+                resizeMode="cover"
+              />
+            </View>
+            
+            {/* Center - Title */}
+            <View style={styles.headerInfo}>
+              <Text style={styles.headerTitle}>Orientation Time</Text>
+              <View style={styles.onlineIndicator}>
+                <View style={styles.onlineDot} />
+                <Text style={styles.onlineText}>Genybot</Text>
+              </View>
+            </View>
+            
+            {/* Right - Mode Switch Slider */}
+            {(step === 'chat' || step === 'voice') ? (
+              <View style={styles.switchSliderContainer}>
+                <TouchableOpacity 
+                  style={styles.switchSlider}
+                  onPress={() => {
+                    setStep(step === 'chat' ? 'voice' : 'chat');
+                    setUserResponse('');
+                  }}
+                  activeOpacity={0.8}
+                >
+                  <Animated.View style={[
+                    styles.switchThumb,
+                    step === 'voice' && styles.switchThumbRight,
+                  ]}>
+                    {step === 'chat' ? (
+                      <MessageCircle size={16} color="#000000" />
+                    ) : (
+                      <Mic size={16} color="#000000" />
+                    )}
+                  </Animated.View>
+                  <View style={styles.switchIcons}>
+                    <MessageCircle size={14} color={step === 'chat' ? '#FFFFFF' : 'rgba(255,255,255,0.4)'} />
+                    <Mic size={14} color={step === 'voice' ? '#FFFFFF' : 'rgba(255,255,255,0.4)'} />
+                  </View>
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <View style={styles.switchSliderContainer} />
+            )}
+          </View>
+
+          {step === 'language' ? (
+            // Language Selection Screen
+            <View style={styles.selectionContainer}>
+              {/* Avatar with Speech Bubble */}
+              <Animatable.View animation="bounceIn" duration={800} style={styles.selectionAvatar}>
+                <Animatable.View 
+                  animation="fadeIn" 
+                  delay={600}
+                  duration={600}
+                  style={styles.speechBubble}
+                >
+                  <Text style={styles.speechBubbleText}>
+                    Hi {userName}! I'm Genybot! 🤖
+                  </Text>
+                  <View style={styles.speechBubbleTail} />
+                </Animatable.View>
+                
+                <Animatable.View
+                  animation={{
+                    0: { translateY: 0 },
+                    0.5: { translateY: -12 },
+                    1: { translateY: 0 },
+                  }}
+                  iterationCount="infinite"
+                  duration={2000}
+                  easing="ease-in-out"
+                >
+                  <View style={styles.avatarContainer}>
+                    <View style={styles.robotHead}>
+                      <View style={styles.robotHeadInner}>
+                        {/* Eyes */}
+                        <View style={styles.robotEyes}>
+                          <Animatable.View 
+                            animation={{
+                              0: { scaleX: 1, scaleY: 1 },
+                              0.5: { scaleX: 0.2, scaleY: 1 },
+                              1: { scaleX: 1, scaleY: 1 },
+                            }}
+                            iterationCount="infinite" 
+                            duration={3000}
+                            style={styles.robotEyeLeft}
+                          >
+                            <View style={styles.robotPupil} />
+                          </Animatable.View>
+                          <Animatable.View 
+                            animation={{
+                              0: { scaleX: 1, scaleY: 1 },
+                              0.5: { scaleX: 0.2, scaleY: 1 },
+                              1: { scaleX: 1, scaleY: 1 },
+                            }}
+                            iterationCount="infinite" 
+                            duration={3000}
+                            style={styles.robotEyeRight}
+                          >
+                            <View style={styles.robotPupil} />
+                          </Animatable.View>
+                        </View>
+                        
+                        {/* Mouth */}
+                        <Animatable.View
+                          animation={{
+                            0: { scaleY: 1 },
+                            0.5: { scaleY: 0.8 },
+                            1: { scaleY: 1 },
+                          }}
+                          iterationCount="infinite"
+                          duration={2000}
+                          style={styles.robotMouth}
+                        />
+                        
+                        {/* Antenna */}
+                        <View style={styles.robotAntenna}>
+                          <View style={styles.robotAntennaBall} />
+                        </View>
+                      </View>
+                    </View>
+                  </View>
+                </View>
+              </View>
+
+              {/* Welcome Text */}
+              <View>
+                <Text style={styles.selectionTitle}>Please select a language</Text>
+                <Text style={styles.selectionSubtitle}>
+                  Choose your preferred language for onboarding
+                </Text>
+              </View>
+
+              {/* Language Buttons */}
+              <View style={styles.languageButtons}>
+                {['English', 'Bahasa Melayu'].map((lang) => (
+                  <TouchableOpacity 
+                    key={lang}
+                    style={styles.languageButton}
+                    onPress={() => handleLanguageSelection(lang)}
+                    activeOpacity={0.8}
+                  >
+                    <Text style={styles.languageButtonText}>
+                      {lang === 'English' ? '🇬🇧' : '🇲🇾'} {lang}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+          ) : step === 'modeSelection' ? (
+            // Mode Selection Screen
+            <Animated.View 
+              style={[
+                styles.selectionContainer,
+                {
+                  opacity: modeOpacity,
+                  transform: [{ translateY: contentSlide }],
+                }
+              ]}
+            >
+              {/* Avatar with Speech Bubble */}
+              <Animatable.View animation="bounceIn" duration={800} style={styles.selectionAvatar}>
+                {/* Speech Bubble */}
+                <Animatable.View 
+                  animation="fadeIn" 
+                  delay={600}
+                  duration={600}
+                  style={styles.speechBubble}
+                >
+                  <Text style={styles.speechBubbleText}>
+                    {selectedLanguage === 'Bahasa Melayu'
+                      ? 'Chat atau suara? 💬🎤'
+                      : 'Chat or voice? 💬🎤'}
+                  </Text>
+                  <View style={styles.speechBubbleTail} />
+                </Animatable.View>
+                
+                <Animatable.View
+                  animation={{
+                    0: { translateY: 0 },
+                    0.5: { translateY: -12 },
+                    1: { translateY: 0 },
+                  }}
+                  iterationCount="infinite"
+                  duration={2000}
+                  easing="ease-in-out"
+                >
+                  <View style={styles.avatarContainer}>
+                    <View style={styles.robotHead}>
+                      <View style={styles.robotHeadInner}>
+                        {/* Eyes */}
+                        <View style={styles.robotEyes}>
+                          <Animatable.View 
+                            animation={{
+                              0: { scaleX: 1, scaleY: 1 },
+                              0.5: { scaleX: 0.2, scaleY: 1 },
+                              1: { scaleX: 1, scaleY: 1 },
+                            }}
+                            iterationCount="infinite" 
+                            duration={3000}
+                            style={styles.robotEyeLeft}
+                          >
+                            <View style={styles.robotPupil} />
+                          </Animatable.View>
+                          <Animatable.View 
+                            animation={{
+                              0: { scaleX: 1, scaleY: 1 },
+                              0.5: { scaleX: 0.2, scaleY: 1 },
+                              1: { scaleX: 1, scaleY: 1 },
+                            }}
+                            iterationCount="infinite" 
+                            duration={3000}
+                            style={styles.robotEyeRight}
+                          >
+                            <View style={styles.robotPupil} />
+                          </Animatable.View>
+                        </View>
+                        
+                        {/* Mouth */}
+                        <Animatable.View
+                          animation={{
+                            0: { scaleY: 1 },
+                            0.5: { scaleY: 0.8 },
+                            1: { scaleY: 1 },
+                          }}
+                          iterationCount="infinite"
+                          duration={2000}
+                          style={styles.robotMouth}
+                        />
+                        
+                        {/* Antenna */}
+                        <View style={styles.robotAntenna}>
+                          <Animatable.View
+                            animation="pulse"
+                            iterationCount="infinite"
+                            duration={1500}
+                            style={styles.robotAntennaBall}
+                          />
+                        </View>
+                      </View>
+                    </View>
+                  </View>
+                </Animatable.View>
+              </Animatable.View>
+
+              {/* Welcome Text */}
+              <Animatable.View animation="fadeInUp" delay={300} duration={600}>
+                <Text style={styles.selectionTitle}>
+                  {selectedLanguage === 'Bahasa Melayu' 
+                    ? 'Selamat datang ke Genius!' 
+                    : 'Welcome to Genius!'}
+                </Text>
+                <Text style={styles.selectionSubtitle}>
+                  {selectedLanguage === 'Bahasa Melayu'
+                    ? 'Bagaimana anda ingin melengkapkan profil anda?'
+                    : 'How would you like to complete your profile?'}
+                </Text>
+              </Animatable.View>
+
+              {/* Mode Buttons */}
+              <Animatable.View animation="fadeInUp" delay={500} duration={600} style={styles.modeButtons}>
+                <TouchableOpacity 
+                  style={styles.modeButton}
+                  onPress={() => handleModeSelection('chat')}
+                  activeOpacity={0.8}
+                >
+                  <MessageCircle size={32} color="#FFFFFF" strokeWidth={2} />
+                  <Text style={styles.modeButtonTitle}>Chat</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity 
+                  style={styles.modeButton}
+                  onPress={() => handleModeSelection('voice')}
+                  activeOpacity={0.8}
+                >
+                  <Mic size={32} color="#FFFFFF" strokeWidth={2} />
+                  <Text style={styles.modeButtonTitle}>Voice</Text>
+                </TouchableOpacity>
+              </Animatable.View>
+            </Animated.View>
+          ) : step === 'voice' ? (
+            // Voice Mode - Jom Tanya Style
+            <Animated.View 
+              style={[
+                styles.voiceContainer, 
+                { 
+                  opacity: modeOpacity,
+                  transform: [{ translateY: contentSlide }],
+                }
+              ]}
+            >
+              {/* Avatar */}
+              <View style={styles.voiceAvatarSection}>
+                <TutorpalAvatar
+                  state={avatarState}
+                  size={140}
+                  isVisible={true}
+                />
+              </View>
+
+              {/* Current Question */}
+              <View style={styles.questionContainer}>
+                <Text style={styles.questionText}>
+                  {onboardingSteps[currentStep].question}
+                </Text>
+              </View>
+
+              {/* Voice Response Display or Options */}
+              {onboardingSteps[currentStep].type === 'select' || onboardingSteps[currentStep].type === 'multiselect' ? (
+                <View style={styles.voiceOptionsContainer}>
+                  <View style={styles.optionsGrid}>
+                    {onboardingSteps[currentStep].options?.map((option) => (
+                      <TouchableOpacity
+                        key={option}
+                        style={[
+                          styles.voiceOptionButton,
+                          (onboardingSteps[currentStep].type === 'multiselect' 
+                            ? selectedMultiOptions.includes(option)
+                            : userResponse === option
+                          ) && styles.voiceOptionButtonActive,
+                        ]}
+                        onPress={() => {
+                          if (onboardingSteps[currentStep].type === 'multiselect') {
+                            handleMultiOptionToggle(option);
+                          } else {
+                            setUserResponse(option);
+                          }
+                        }}
+                      >
+                        <Text style={[
+                          styles.voiceOptionText,
+                          (onboardingSteps[currentStep].type === 'multiselect'
+                            ? selectedMultiOptions.includes(option)
+                            : userResponse === option
+                          ) && styles.voiceOptionTextActive,
+                        ]}>
+                          {option}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                  <TouchableOpacity 
+                    style={[styles.voiceSubmitButton, 
+                      (onboardingSteps[currentStep].type === 'multiselect' && selectedMultiOptions.length === 0) && styles.voiceSubmitButtonDisabled
+                    ]}
+                    onPress={handleNextStep}
+                    disabled={onboardingSteps[currentStep].type === 'multiselect' && selectedMultiOptions.length === 0}
+                  >
+                    <Text style={styles.voiceSubmitButtonText}>
+                      {loading ? 'Saving...' : 'Continue'}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              ) : userResponse ? (
+                <Animatable.View animation="fadeIn" style={styles.voiceResponseContainer}>
+                  <Text style={styles.voiceResponseText}>{userResponse}</Text>
+                  <TouchableOpacity 
+                    style={styles.voiceEditButton}
+                    onPress={() => setUserResponse('')}
+                  >
+                    <Text style={styles.voiceEditButtonText}>Re-record</Text>
+                  </TouchableOpacity>
+                </Animatable.View>
+              ) : null}
+
+              {/* Mic Button - Fixed at Bottom */}
+              {(onboardingSteps[currentStep].type === 'text' || onboardingSteps[currentStep].type === 'date') && (
+                <View style={styles.voiceMicContainerFixed}>
+                  <TouchableOpacity 
+                    style={[
+                      styles.voiceMicButtonSmall,
+                      isRecording && styles.voiceMicButtonActive,
+                      isProcessing && styles.voiceMicButtonProcessing
+                    ]}
+                    onPressIn={handleMicPressIn}
+                    onPressOut={handleMicPressOut}
+                    disabled={isProcessing}
+                    activeOpacity={0.8}
+                  >
+                    {isProcessing ? (
+                      <Animatable.View animation="rotate" iterationCount="infinite" duration={1000}>
+                        <Sparkles size={32} color="#FFFFFF" />
+                      </Animatable.View>
+                    ) : isRecording ? (
+                      <MicOff size={32} color="#FFFFFF" />
+                    ) : (
+                      <Image 
+                        source={require('../assets/images/mic.png')} 
+                        style={styles.voiceMicIconSmall}
+                        resizeMode="contain"
+                      />
+                    )}
+                  </TouchableOpacity>
+                  
+                  <Text style={styles.voiceInstructions}>
+                    {isRecording 
+                      ? 'Release to stop' 
+                      : isProcessing 
+                        ? 'Processing...' 
+                        : 'Hold to record'
+                    }
+                  </Text>
+                </View>
+              )}
+
+              {/* Step Progress */}
+              <View style={styles.timeContainer}>
+                <Text style={styles.timeText}>
+                  Step {currentStep + 1} of {onboardingSteps.length}
+                </Text>
+              </View>
+            </Animated.View>
+          ) : (
+            // Chat Mode (step === 'chat')
+            <Animated.View 
+              style={{ 
+                flex: 1,
+                opacity: modeOpacity,
+                transform: [{ translateY: contentSlide }],
+              }}
+            >
+              <KeyboardAvoidingView 
+                style={styles.chatContainer}
+                behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+              >
+      <ScrollView
+        ref={scrollViewRef}
+              style={styles.messagesContainer}
+              showsVerticalScrollIndicator={false}
+            >
+              {conversationHistory.map((msg, index) => (
+                <Animatable.View 
+            key={index}
+                  animation="fadeInUp" 
+                  delay={index * 100}
+            style={[
+                    styles.messageContainer,
+                    msg.type === 'user' ? styles.userMessageContainer : styles.aiMessageContainer,
+                  ]}
+                >
+                  {msg.type === 'ai' && (
+                    <View style={styles.aiAvatar}>
+                      <Sparkles size={16} color="#000000" />
+                    </View>
+                  )}
+                  
+                  <View style={[
+                    styles.messageBubble,
+                    msg.type === 'user' ? styles.userMessageBubble : styles.aiMessageBubble,
+                  ]}>
+                    <Text style={[
+                      styles.messageText,
+                      msg.type === 'user' ? styles.userMessageText : styles.aiMessageText,
+                    ]}>
+                      {msg.message}
+                    </Text>
+                    
+                  </View>
+                </Animatable.View>
+              ))}
+              
+              {aiTyping && (
+                <Animatable.View animation="fadeIn" style={styles.typingContainer}>
+                  <View style={styles.aiAvatar}>
+                    <Sparkles size={16} color="#000000" />
+                  </View>
+                  <View style={styles.typingBubble}>
+                    <Animatable.View 
+                      animation="pulse" 
+                      iterationCount="infinite"
+                      style={styles.typingDots}
+                    >
+                      <View style={styles.typingDot} />
+                      <View style={styles.typingDot} />
+                      <View style={styles.typingDot} />
+                    </Animatable.View>
+                  </View>
+                </Animatable.View>
+              )}
+            </ScrollView>
+
+            {/* Input Area */}
+            <View style={styles.inputContainer}>
+              <View style={styles.inputWrapper}>
+                {renderInput()}
+              </View>
+              <TouchableOpacity 
+                style={[styles.sendButton, (!userResponse.trim() && onboardingSteps[currentStep].type !== 'multiselect') && styles.sendButtonDisabled]}
+                onPress={() => {
+                  // Close date picker if open
+                  if (showDatePicker) {
+                    confirmDateSelection();
+                  }
+                  handleNextStep();
+                }}
+                disabled={(!userResponse.trim() && onboardingSteps[currentStep].type !== 'multiselect') || (onboardingSteps[currentStep].type === 'multiselect' && selectedMultiOptions.length === 0)}
+              >
+                {loading ? (
+                  <LoadingSpinner size={20} color="#000000" />
+                ) : (
+                  <Send size={20} color={(!userResponse.trim() && onboardingSteps[currentStep].type !== 'multiselect') ? '#666666' : '#000000'} />
+                )}
+              </TouchableOpacity>
+            </View>
+            
+            {/* Time text below input */}
+            <View style={styles.timeContainer}>
+              <Text style={styles.timeText}>
+                Step {currentStep + 1} of {onboardingSteps.length}
+              </Text>
+            </View>
+              </KeyboardAvoidingView>
+            </Animated.View>
+          )}
+        </SafeAreaView>
+      </View>
+    </Animated.View>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#000000',
+  },
+  backgroundContainer: {
+    flex: 1,
+  },
+  safeArea: {
+    flex: 1,
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingTop: 8,
+    paddingBottom: 12,
+    borderBottomWidth: 0,
+  },
+  headerInfo: {
+    flex: 1,
+  },
+  headerTitle: {
+    fontSize: 18,
+    fontFamily: 'Inter-Bold',
+    color: '#FFFFFF',
+    marginBottom: 2,
+  },
+  onlineIndicator: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+  },
+  onlineDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#00FF00',
+  },
+  onlineText: {
+    fontSize: 12,
+    fontFamily: 'Inter-Regular',
+    color: '#00FF00',
+  },
+  headerButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  profilePicContainer: {
+    width: 44,
+    height: 44,
+    borderRadius: 8,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.3)',
+    marginRight: 12,
+  },
+  profilePic: {
+    width: '100%',
+    height: '100%',
+  },
+  switchSliderContainer: {
+    width: 80,
+    height: 40,
+  },
+  switchSlider: {
+    width: 80,
+    height: 40,
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    borderRadius: 20,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 4,
+    position: 'relative',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.25)',
+  },
+  switchThumb: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#00FF00',
+    position: 'absolute',
+    left: 4,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#00FF00',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.6,
+    shadowRadius: 4,
+    elevation: 8,
+  },
+  switchThumbRight: {
+    left: 44,
+  },
+  switchIcons: {
+    flexDirection: 'row',
+    width: '100%',
+    justifyContent: 'space-around',
+    paddingHorizontal: 8,
+    zIndex: -1,
+  },
+  avatarSection: {
+    alignItems: 'center',
+    paddingVertical: 20,
+  },
+  chatContainer: {
+    flex: 1,
+  },
+  messagesContainer: {
+    flex: 1,
+    paddingHorizontal: 20,
+    paddingTop: 20,
+  },
+  messageContainer: {
+    marginBottom: 20,
+  },
+  userMessageContainer: {
+    alignItems: 'flex-end',
+  },
+  aiMessageContainer: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 10,
+  },
+  aiAvatar: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#00FF00',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 5,
+  },
+  messageBubble: {
+    maxWidth: '80%',
+    borderRadius: 20,
+    padding: 15,
+  },
+  userMessageBubble: {
+    backgroundColor: '#00FF00',
+    borderBottomRightRadius: 5,
+  },
+  aiMessageBubble: {
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    borderBottomLeftRadius: 5,
+    flex: 1,
+  },
+  messageText: {
+    fontSize: 16,
+    fontFamily: 'Inter-Regular',
+    lineHeight: 22,
+  },
+  userMessageText: {
+    color: '#000000',
+  },
+  aiMessageText: {
+    color: '#FFFFFF',
+  },
+  audioButton: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: 'rgba(0, 255, 0, 0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 10,
+  },
+  typingContainer: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 10,
+    marginBottom: 20,
+  },
+  typingBubble: {
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    borderRadius: 20,
+    borderBottomLeftRadius: 5,
+    padding: 15,
+  },
+  typingDots: {
+    flexDirection: 'row',
+    gap: 5,
+  },
+  typingDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#666666',
+  },
+  inputContainer: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    paddingHorizontal: 20,
+    paddingVertical: 15,
+    paddingBottom: 30,
+    gap: 10,
+  },
+  inputWrapper: {
+    flex: 1,
+    backgroundColor: 'rgba(255, 255, 255, 0.12)',
+    borderRadius: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.25)',
+    minHeight: 52,
+    justifyContent: 'center',
+  },
+  input: {
+    flex: 1,
+    fontSize: 16,
+    fontFamily: 'Inter-Regular',
+    color: '#FFFFFF',
+    maxHeight: 100,
+    minHeight: 24,
+  },
+  sendButton: {
+    width: 52,
+    height: 52,
+    borderRadius: 8,
+    backgroundColor: '#00FF00',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  sendButtonDisabled: {
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+  },
+  optionsContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+    flex: 1,
+    marginRight: 10,
+  },
+  optionButton: {
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    borderRadius: 8,
+    paddingHorizontal: 15,
+    paddingVertical: 10,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.2)',
+  },
+  optionButtonActive: {
+    backgroundColor: '#00FF00',
+    borderColor: '#00FF00',
+  },
+  optionText: {
+    color: '#FFFFFF',
+    fontFamily: 'Inter-Medium',
+    fontSize: 14,
+  },
+  optionTextActive: {
+    color: '#000000',
+  },
+  dateInputContainer: {
+    flex: 1,
+    marginRight: 10,
+  },
+  dateInputButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: 'rgba(255, 255, 255, 0.12)',
+    borderRadius: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.25)',
+    minHeight: 52,
+  },
+  dateInputText: {
+    fontSize: 16,
+    fontFamily: 'Inter-Regular',
+    flex: 1,
+  },
+  datePickerContainer: {
+    marginTop: 10,
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    borderRadius: 10,
+    padding: 10,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  timeContainer: {
+    paddingHorizontal: 20,
+    paddingBottom: 16,
+    alignItems: 'center',
+  },
+  timeText: {
+    fontSize: 13,
+    fontFamily: 'Inter-Medium',
+    color: 'rgba(255, 255, 255, 0.5)',
+    letterSpacing: 0.5,
+  },
+  // Mode Selection Styles
+  selectionContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 32,
+    paddingBottom: 60,
+  },
+  selectionAvatar: {
+    marginBottom: 40,
+    alignItems: 'center',
+    position: 'relative',
+  },
+  speechBubble: {
+    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+    borderRadius: 20,
+    padding: 16,
+    marginBottom: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 6,
+    maxWidth: 220,
+  },
+  speechBubbleText: {
+    fontSize: 16,
+    fontFamily: 'Inter-SemiBold',
+    fontWeight: '600',
+    color: '#000000',
+    textAlign: 'center',
+  },
+  speechBubbleTail: {
+    position: 'absolute',
+    bottom: -8,
+    left: '50%',
+    marginLeft: -8,
+    width: 0,
+    height: 0,
+    borderLeftWidth: 8,
+    borderRightWidth: 8,
+    borderTopWidth: 8,
+    borderLeftColor: 'transparent',
+    borderRightColor: 'transparent',
+    borderTopColor: 'rgba(255, 255, 255, 0.95)',
+  },
+  switchButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 8,
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  selectionTitle: {
+    fontSize: 32,
+    fontFamily: 'Inter-Bold',
+    fontWeight: '800',
+    color: '#FFFFFF',
+    textAlign: 'center',
+    marginBottom: 12,
+    letterSpacing: -0.5,
+  },
+  selectionSubtitle: {
+    fontSize: 16,
+    fontFamily: 'Inter-Regular',
+    color: 'rgba(255, 255, 255, 0.7)',
+    textAlign: 'center',
+    marginBottom: 48,
+    lineHeight: 24,
+  },
+  modeButtons: {
+    flexDirection: 'row',
+    gap: 16,
+    width: '100%',
+  },
+  modeButton: {
+    flex: 1,
+    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    borderRadius: 12,
+    paddingVertical: 20,
+    paddingHorizontal: 16,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.2)',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 12,
+    elevation: 8,
+    justifyContent: 'center',
+    gap: 10,
+  },
+  modeButtonTitle: {
+    fontSize: 16,
+    fontFamily: 'Inter-Bold',
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
+  // Voice Mode Styles
+  voiceContainer: {
+    flex: 1,
+    justifyContent: 'space-between',
+    paddingVertical: 40,
+  },
+  voiceAvatarSection: {
+    alignItems: 'center',
+    marginTop: 20,
+  },
+  questionContainer: {
+    paddingHorizontal: 32,
+    alignItems: 'center',
+    marginVertical: 32,
+  },
+  questionText: {
+    fontSize: 20,
+    fontFamily: 'Inter-SemiBold',
+    fontWeight: '600',
+    color: '#FFFFFF',
+    textAlign: 'center',
+    lineHeight: 28,
+  },
+  voiceResponseContainer: {
+    marginHorizontal: 32,
+    backgroundColor: 'rgba(0, 255, 0, 0.15)',
+    borderRadius: 16,
+    padding: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(0, 255, 0, 0.3)',
+  },
+  voiceResponseText: {
+    fontSize: 16,
+    fontFamily: 'Inter-Regular',
+    color: '#FFFFFF',
+    textAlign: 'center',
+  },
+  voiceMicContainer: {
+    alignItems: 'center',
+    paddingBottom: 40,
+  },
+  voiceMicButton: {
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    backgroundColor: '#00FF00',
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#00FF00',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.6,
+    shadowRadius: 20,
+    elevation: 15,
+    marginBottom: 20,
+  },
+  voiceMicContainerFixed: {
+    alignItems: 'center',
+    paddingVertical: 24,
+  },
+  voiceMicButtonSmall: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: '#00FF00',
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#00FF00',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.6,
+    shadowRadius: 16,
+    elevation: 12,
+    marginBottom: 12,
+  },
+  voiceMicIconSmall: {
+    width: 44,
+    height: 44,
+  },
+  voiceMicButtonActive: {
+    backgroundColor: '#FF0000',
+    shadowColor: '#FF0000',
+  },
+  voiceMicButtonProcessing: {
+    backgroundColor: '#3B82F6',
+    shadowColor: '#3B82F6',
+  },
+  micInner: {
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  voiceMicIcon: {
+    width: 60,
+    height: 60,
+  },
+  voiceInstructions: {
+    fontSize: 15,
+    fontFamily: 'Inter-Medium',
+    fontWeight: '500',
+    color: 'rgba(255, 255, 255, 0.8)',
+    textAlign: 'center',
+  },
+  voiceOptionsContainer: {
+    paddingHorizontal: 24,
+    alignItems: 'center',
+  },
+  optionsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+    gap: 12,
+    marginBottom: 24,
+  },
+  voiceOptionButton: {
+    backgroundColor: 'rgba(255, 255, 255, 0.12)',
+    borderRadius: 12,
+    paddingHorizontal: 20,
+    paddingVertical: 14,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.25)',
+    minWidth: 100,
+  },
+  voiceOptionButtonActive: {
+    backgroundColor: '#00FF00',
+    borderColor: '#00FF00',
+  },
+  voiceOptionText: {
+    fontSize: 15,
+    fontFamily: 'Inter-Medium',
+    color: '#FFFFFF',
+    textAlign: 'center',
+  },
+  voiceOptionTextActive: {
+    color: '#000000',
+  },
+  voiceSubmitButton: {
+    backgroundColor: '#00FF00',
+    borderRadius: 12,
+    paddingHorizontal: 48,
+    paddingVertical: 16,
+    shadowColor: '#00FF00',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.5,
+    shadowRadius: 12,
+    elevation: 10,
+  },
+  voiceSubmitButtonDisabled: {
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    shadowOpacity: 0,
+  },
+  voiceSubmitButtonText: {
+    fontSize: 17,
+    fontFamily: 'Inter-Bold',
+    fontWeight: '700',
+    color: '#000000',
+    textAlign: 'center',
+  },
+  voiceEditButton: {
+    marginTop: 12,
+    paddingVertical: 8,
+    alignItems: 'center',
+  },
+  voiceEditButtonText: {
+    fontSize: 14,
+    fontFamily: 'Inter-Medium',
+    color: '#00FF00',
+  },
+  // Language Selection Styles
+  languageButtons: {
+    width: '100%',
+    gap: 16,
+  },
+  languageButton: {
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    borderRadius: 16,
+    paddingVertical: 20,
+    paddingHorizontal: 32,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.3)',
+    shadowColor: '#FFFFFF',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.2,
+    shadowRadius: 16,
+    elevation: 10,
+    backdropFilter: 'blur(20px)',
+  },
+  languageButtonText: {
+    fontSize: 18,
+    fontFamily: 'Inter-Bold',
+    fontWeight: '700',
+    color: '#FFFFFF',
+    textAlign: 'center',
+    letterSpacing: 0.5,
+  },
+  // Custom Robot Avatar Styles
+  avatarContainer: {
+    alignItems: 'center',
+  },
+  robotHead: {
+    width: 180,
+    height: 180,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  robotHeadInner: {
+    width: 160,
+    height: 160,
+    borderRadius: 40,
+    backgroundColor: '#FF8C42',
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#FF8C42',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.6,
+    shadowRadius: 25,
+    elevation: 20,
+    position: 'relative',
+    borderWidth: 4,
+    borderColor: 'rgba(255, 255, 255, 0.3)',
+  },
+  robotAntenna: {
+    position: 'absolute',
+    top: -20,
+    width: 4,
+    height: 24,
+    backgroundColor: '#FF8C42',
+    alignItems: 'center',
+  },
+  robotAntennaBall: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    backgroundColor: '#00FF00',
+    position: 'absolute',
+    top: -6,
+  },
+  robotEyes: {
+    flexDirection: 'row',
+    gap: 28,
+    marginBottom: 16,
+  },
+  robotEyeLeft: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    backgroundColor: '#FFFFFF',
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    borderWidth: 2,
+    borderColor: '#000000',
+  },
+  robotEyeRight: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    backgroundColor: '#FFFFFF',
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    borderWidth: 2,
+    borderColor: '#000000',
+  },
+  robotPupil: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: '#000000',
+  },
+  robotMouth: {
+    width: 50,
+    height: 16,
+    borderBottomLeftRadius: 25,
+    borderBottomRightRadius: 25,
+    borderWidth: 4,
+    borderTopWidth: 0,
+    borderColor: '#000000',
+    backgroundColor: 'transparent',
+  },
+});
