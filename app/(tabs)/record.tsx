@@ -423,7 +423,7 @@ export default function RecordPage() {
       
       {/* Header with Black Background */}
       <View style={styles.header}>
-        <View style={[styles.headerContent, { paddingTop: 50 + insets.top }]}>
+        <View style={styles.headerContent}>
           <View style={styles.headerLeft}>
             <TouchableOpacity 
               style={styles.backButton}

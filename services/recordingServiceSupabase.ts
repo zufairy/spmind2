@@ -517,28 +517,50 @@ class RecordingServiceSupabase {
               console.warn(`⚠️ Attempt ${attempt} returned null data, trying to query by audio_uri...`);
               
               // Wait a moment for database to sync
-              await new Promise(resolve => setTimeout(resolve, 500));
+              await new Promise(resolve => setTimeout(resolve, 1000));
               
-              // Try to find the session we just created
-              const { data: queriedData, error: queryError } = await supabase
+              // Try to find the session we just created - use array result instead of single
+              const { data: queriedDataArray, error: queryError } = await supabase
                 .from('recording_sessions')
-                .select('*')
+                .select('id, user_id, title, description, audio_uri, duration, transcript, summary, subjects, tags, created_at, updated_at')
                 .eq('user_id', currentUser.id)
                 .eq('audio_uri', uri)
                 .order('created_at', { ascending: false })
-                .limit(1)
-                .single();
+                .limit(1);
               
               console.log(`🔍 Query result:`, {
-                hasData: !!queriedData,
+                hasData: !!queriedDataArray,
+                isArray: Array.isArray(queriedDataArray),
+                arrayLength: queriedDataArray?.length,
                 hasError: !!queryError,
-                dataId: queriedData?.id,
+                firstItemId: queriedDataArray?.[0]?.id,
+                fullData: queriedDataArray,
               });
+              
+              // Handle both array and single object responses
+              const queriedData = Array.isArray(queriedDataArray) ? queriedDataArray[0] : queriedDataArray;
               
               if (queriedData && queriedData.id) {
                 sessionData = queriedData;
                 console.log(`✅ Session found via query on attempt ${attempt}:`, sessionData.id);
                 break;
+              } else if (queriedData && !queriedData.id) {
+                console.error(`⚠️ Query returned data but missing id:`, queriedData);
+                // Try to get id from a different query
+                const { data: idQueryData } = await supabase
+                  .from('recording_sessions')
+                  .select('id')
+                  .eq('user_id', currentUser.id)
+                  .eq('audio_uri', uri)
+                  .order('created_at', { ascending: false })
+                  .limit(1)
+                  .single();
+                
+                if (idQueryData && idQueryData.id) {
+                  sessionData = { ...queriedData, id: idQueryData.id };
+                  console.log(`✅ Session id found via separate query:`, sessionData.id);
+                  break;
+                }
               }
               
               // Still no data
@@ -624,7 +646,8 @@ class RecordingServiceSupabase {
           });
         }
         
-        console.log(`📝 Creating ${stickyNotesToCreate.length} sticky notes for session ${sessionData.id}`);
+        const sessionId = sessionData.id; // Get session ID once
+        console.log(`📝 Creating ${stickyNotesToCreate.length} sticky notes for session ${sessionId}`);
         
         if (stickyNotesToCreate.length > 0) {
           // Insert all sticky notes at once for better performance
@@ -648,7 +671,7 @@ class RecordingServiceSupabase {
             }
             
             return {
-              session_id: sessionData.id,
+              session_id: sessionId, // Use the validated sessionId
               user_id: currentUser.id,
               title: noteData.title || 'Untitled Note',
               content: noteData.content || '',
@@ -660,10 +683,18 @@ class RecordingServiceSupabase {
             };
           });
 
+          console.log(`📝 Inserting ${stickyNotesToInsert.length} sticky notes with session_id: ${sessionId}`);
+          console.log(`📝 First note preview:`, {
+            session_id: stickyNotesToInsert[0]?.session_id,
+            title: stickyNotesToInsert[0]?.title,
+            type: stickyNotesToInsert[0]?.type,
+            color: stickyNotesToInsert[0]?.color,
+          });
+
           const { data: insertedNotes, error: stickyNoteError } = await supabase
             .from('session_sticky_notes')
             .insert(stickyNotesToInsert)
-            .select();
+            .select('id, session_id, title, content, type, color, priority');
 
           if (stickyNoteError) {
             console.error('Error creating sticky notes:', stickyNoteError);
@@ -687,11 +718,12 @@ class RecordingServiceSupabase {
                   validType = 'important';
                 }
                 
-                const { error: singleNoteError } = await supabase
+                console.log(`📝 Inserting individual note with session_id: ${sessionId}`);
+                const { data: singleNoteData, error: singleNoteError } = await supabase
                   .from('session_sticky_notes')
                   .insert([
                     {
-                      session_id: sessionData.id,
+                      session_id: sessionId, // Use the validated sessionId
                       user_id: currentUser.id,
                       title: noteData.title || 'Untitled Note',
                       content: noteData.content || '',
@@ -701,7 +733,8 @@ class RecordingServiceSupabase {
                       completed: false,
                       image: null,
                     }
-                  ]);
+                  ])
+                  .select('id, session_id, title');
 
                 if (singleNoteError) {
                   console.error('Error creating individual sticky note:', singleNoteError);
