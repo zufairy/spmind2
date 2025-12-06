@@ -480,6 +480,96 @@ Overall Summary:`;
   }
 
   /**
+   * Generate a single AI-based sticky note from transcript/summary
+   * Used when no educational sticky notes are extracted but we want a meaningful note
+   */
+  private async generateSummaryStickyNote(transcript: string, summary?: string): Promise<{
+    title: string;
+    content: string;
+    type: 'task' | 'focus' | 'important' | 'todo' | 'reminder' | 'exam' | 'deadline' | 'formula' | 'definition' | 'tip';
+    color: 'yellow' | 'pink' | 'green' | 'blue' | 'purple' | 'orange' | 'red';
+    priority: 'high' | 'medium' | 'low';
+  } | null> {
+    try {
+      console.log('📝 Generating AI-based summary sticky note...');
+      
+      // Import aiService dynamically
+      const { aiService } = await import('./aiService');
+      
+      // Detect language
+      const malayWords = ['yang', 'dan', 'atau', 'untuk', 'dalam', 'dengan', 'saya', 'awak', 'dia', 'kita'];
+      const contentSource = summary || transcript.substring(0, 500);
+      const words = contentSource.toLowerCase().split(/\s+/);
+      const malayCount = words.filter(w => malayWords.includes(w)).length;
+      const isMalay = (malayCount / words.length) > 0.1;
+      const detectedLanguage = isMalay ? 'Malay' : 'English';
+      const language = isMalay ? 'ms' : 'en';
+      
+      const prompt = `Based on this recording content, create ONE meaningful sticky note that summarizes the main topic or key takeaway.
+
+CRITICAL LANGUAGE RULE:
+- You MUST respond in the EXACT SAME language as the content
+- If the content is in Malay, you MUST respond in Malay
+- If the content is in English, you MUST respond in English
+- If the content is mixed language, respond in the same mixed language naturally
+- DO NOT translate or change the language - keep it identical
+
+REQUIREMENTS:
+1. Title: 3-5 words max, describing the main topic (in ${detectedLanguage})
+2. Content: 1 sentence max, ≤15 words, summarizing the key point (in ${detectedLanguage})
+3. Type: Choose from: important, reminder, tip, definition, or exam (based on content)
+4. Color: Choose from: yellow, pink, green, blue, purple
+5. Priority: Choose from: high, medium, low (based on importance)
+
+Content to summarize:
+${contentSource}
+
+DETECTED LANGUAGE: ${detectedLanguage}
+
+Format your response as JSON object:
+{
+  "title": "Main Topic Title in ${detectedLanguage}",
+  "content": "Key takeaway in one sentence in ${detectedLanguage}",
+  "type": "important",
+  "color": "yellow",
+  "priority": "medium"
+}`;
+
+      const response = await aiService.sendMessage(
+        [{ role: 'user', content: prompt }],
+        language
+      );
+
+      if (!response.success || !response.message) {
+        throw new Error('AI response failed');
+      }
+
+      try {
+        const noteData = JSON.parse(response.message);
+        
+        // Validate and return
+        const allowedTypes = ['task', 'focus', 'important', 'todo', 'reminder', 'exam', 'deadline', 'formula', 'definition', 'tip'];
+        const allowedColors = ['yellow', 'pink', 'green', 'blue', 'purple', 'orange', 'red'];
+        const allowedPriorities = ['high', 'medium', 'low'];
+        
+        return {
+          title: (noteData.title || 'Key Point').substring(0, 255), // Ensure title fits database constraint
+          content: noteData.content || 'Important information',
+          type: (allowedTypes.includes(noteData.type) ? noteData.type : 'important') as any,
+          color: (allowedColors.includes(noteData.color) ? noteData.color : 'yellow') as any,
+          priority: (allowedPriorities.includes(noteData.priority) ? noteData.priority : 'medium') as any
+        };
+      } catch (parseError) {
+        console.error('Error parsing summary note JSON:', parseError);
+        throw new Error('Failed to parse summary note response');
+      }
+    } catch (error) {
+      console.error('❌ Error generating summary sticky note:', error);
+      return null;
+    }
+  }
+
+  /**
    * Generate sticky notes from transcript (fallback method)
    */
   private async generateStickyNotesFromTranscript(
@@ -1032,13 +1122,38 @@ Format your response as JSON array (empty [] if no educational content found):
       try {
         const stickyNotesToCreate = aiResults.stickyNotes || [];
         
-        // If no sticky notes from AI or transcript generation, create a default one
+        // If no sticky notes from AI or transcript generation, try to generate one from transcript/summary
         if (stickyNotesToCreate.length === 0) {
-          console.log('📝 No sticky notes from AI or transcript, checking if we need to generate...');
+          console.log('📝 No sticky notes from AI or transcript, checking if we can generate AI-based note...');
           
-          // Only create default if we don't have a transcript to generate from
-          if (!hasTranscript) {
-            console.log('📝 No transcript available, creating default note...');
+          // Try to generate AI-based note from transcript or summary
+          if (hasTranscript || (sessionData.summary && sessionData.summary.trim().length > 10)) {
+            try {
+              console.log('📝 Generating AI-based summary sticky note from transcript/summary...');
+              const summaryNote = await this.generateSummaryStickyNote(
+                sessionData.transcript || '',
+                sessionData.summary || undefined
+              );
+              if (summaryNote) {
+                stickyNotesToCreate.push(summaryNote);
+                console.log('✅ Generated AI-based summary sticky note:', summaryNote.title);
+              } else {
+                throw new Error('Failed to generate summary note');
+              }
+            } catch (error) {
+              console.error('❌ Failed to generate AI-based note, using fallback:', error);
+              // Fallback to default only if AI generation fails
+              stickyNotesToCreate.push({
+                title: 'Recording Saved',
+                content: 'Your recording has been saved successfully.',
+                type: 'important',
+                color: 'yellow',
+                priority: 'medium'
+              });
+            }
+          } else {
+            // No transcript or summary available, use default
+            console.log('📝 No transcript/summary available, creating default note...');
             stickyNotesToCreate.push({
               title: 'Recording Saved',
               content: 'Your recording has been saved successfully.',
@@ -1046,8 +1161,6 @@ Format your response as JSON array (empty [] if no educational content found):
               color: 'yellow',
               priority: 'medium'
             });
-          } else {
-            console.log('📝 Transcript available, notes should have been generated above');
           }
         }
         

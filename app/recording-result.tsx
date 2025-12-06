@@ -159,49 +159,107 @@ Format your response as JSON array (empty [] if no educational content found):
         if (Array.isArray(stickyNotesData) && stickyNotesData.length > 0) {
           console.log(`✅ Generated ${stickyNotesData.length} sticky notes from transcript`);
           
-          // Validate colors and types
+          // Validate colors, types, and priorities according to database schema
           const allowedColors = ['yellow', 'pink', 'green', 'blue', 'purple', 'orange', 'red'];
           const allowedTypes = ['task', 'focus', 'important', 'todo', 'reminder', 'exam', 'deadline', 'formula', 'definition', 'tip'];
+          const allowedPriorities = ['high', 'medium', 'low'];
           
           // Save the new sticky notes directly to session_sticky_notes table
+          let successCount = 0;
           for (const noteData of stickyNotesData) {
-            // Validate color
-            let validColor = noteData.color || 'yellow';
-            if (!allowedColors.includes(validColor)) {
-              validColor = 'yellow';
-            }
-            
-            // Validate type
-            let validType = noteData.type || 'important';
-            if (!allowedTypes.includes(validType)) {
-              validType = 'important';
-            }
-            
-            const { data: stickyNote, error: stickyNoteError } = await supabase
-              .from('session_sticky_notes')
-              .insert([
-                {
-                  session_id: sessionId,
-                  user_id: authUserId, // Use auth user ID to match RLS policy
-                  title: noteData.title || 'Key Point',
-                  content: noteData.content || 'Important information',
-                  type: validType,
-                  color: validColor,
-                  priority: noteData.priority || 'medium',
-                  completed: false,
-                  image: null,
-                }
-              ])
-              .select()
-              .single();
+            try {
+              // Validate and sanitize color
+              let validColor: 'yellow' | 'pink' | 'green' | 'blue' | 'purple' | 'orange' | 'red' = 'yellow';
+              const colorInput = (noteData.color || 'yellow').toLowerCase().trim();
+              if (allowedColors.includes(colorInput)) {
+                validColor = colorInput as typeof validColor;
+              } else {
+                console.warn(`⚠️ Invalid color "${noteData.color}", defaulting to "yellow"`);
+              }
+              
+              // Validate and sanitize type
+              let validType: 'task' | 'focus' | 'important' | 'todo' | 'reminder' | 'exam' | 'deadline' | 'formula' | 'definition' | 'tip' = 'important';
+              const typeInput = (noteData.type || 'important').toLowerCase().trim();
+              if (allowedTypes.includes(typeInput)) {
+                validType = typeInput as typeof validType;
+              } else {
+                console.warn(`⚠️ Invalid type "${noteData.type}", defaulting to "important"`);
+              }
+              
+              // Validate and sanitize priority
+              let validPriority: 'high' | 'medium' | 'low' = 'medium';
+              const priorityInput = (noteData.priority || 'medium').toLowerCase().trim();
+              if (allowedPriorities.includes(priorityInput)) {
+                validPriority = priorityInput as typeof validPriority;
+              } else {
+                console.warn(`⚠️ Invalid priority "${noteData.priority}", defaulting to "medium"`);
+              }
+              
+              // Truncate title to 255 characters (database constraint)
+              const rawTitle = noteData.title || 'Key Point';
+              const validTitle = rawTitle.length > 255 ? rawTitle.substring(0, 252) + '...' : rawTitle;
+              
+              // Sanitize content (can be null)
+              const validContent: string | null = noteData.content && noteData.content.trim() ? noteData.content.trim() : null;
+              
+              // Ensure session_id and user_id are valid UUIDs
+              if (!sessionId || typeof sessionId !== 'string') {
+                console.error('❌ Invalid session_id:', sessionId);
+                continue;
+              }
+              
+              if (!authUserId || typeof authUserId !== 'string') {
+                console.error('❌ Invalid user_id:', authUserId);
+                continue;
+              }
+              
+              console.log(`📝 Inserting sticky note:`, {
+                session_id: sessionId,
+                user_id: authUserId,
+                title: validTitle.substring(0, 50) + '...',
+                type: validType,
+                color: validColor,
+                priority: validPriority
+              });
+              
+              const { data: stickyNote, error: stickyNoteError } = await supabase
+                .from('session_sticky_notes')
+                .insert([
+                  {
+                    session_id: sessionId,
+                    user_id: authUserId,
+                    title: validTitle,
+                    content: validContent,
+                    type: validType,
+                    color: validColor,
+                    priority: validPriority,
+                    completed: false,
+                    image: null,
+                  }
+                ] as any)
+                .select()
+                .single();
 
-            if (stickyNoteError) {
-              console.error('❌ Error creating sticky note:', stickyNoteError);
-              // Continue with other notes even if one fails
-            } else {
-              console.log('✅ Created sticky note:', stickyNote?.title);
+              if (stickyNoteError) {
+                console.error('❌ Error creating sticky note:', {
+                  error: stickyNoteError,
+                  message: stickyNoteError.message,
+                  details: stickyNoteError.details,
+                  hint: stickyNoteError.hint,
+                  code: stickyNoteError.code
+                });
+                // Continue with other notes even if one fails
+              } else if (stickyNote && 'id' in stickyNote && 'title' in stickyNote) {
+                successCount++;
+                console.log('✅ Created sticky note:', (stickyNote as any).id, (stickyNote as any).title);
+              }
+            } catch (err) {
+              console.error('❌ Exception creating sticky note:', err);
+              // Continue with other notes
             }
           }
+          
+          console.log(`✅ Successfully created ${successCount} out of ${stickyNotesData.length} sticky notes`);
           
           // Reload the sticky notes after generation
           console.log('🔄 Reloading sticky notes after generation...');
@@ -212,12 +270,12 @@ Format your response as JSON array (empty [] if no educational content found):
               session_id: sessionId,
               user_id: userId,
               title: note.title,
-              content: note.content || '',
+              content: note.content || null,
               type: note.type,
               color: note.color,
               priority: note.priority,
               completed: note.completed || false,
-              image: note.image,
+              image: note.image || null,
               created_at: new Date().toISOString(),
               updated_at: new Date().toISOString(),
             }));
@@ -264,15 +322,16 @@ Format your response as JSON array (empty [] if no educational content found):
         // Last resort: try querying directly from Supabase
         console.log('Attempting direct Supabase query as fallback...');
         try {
+          const sessionIdStr = Array.isArray(sessionId) ? sessionId[0] : sessionId;
           const { data: directData, error: directError } = await supabase
             .from('recording_sessions')
             .select('*')
-            .eq('id', sessionId)
+            .eq('id', sessionIdStr as any)
             .single();
           
-          if (!directError && directData) {
+          if (!directError && directData && typeof directData === 'object' && 'id' in directData) {
             console.log('✅ Found session via direct query');
-            sessionData = directData as RecordingSession;
+            sessionData = directData as unknown as RecordingSession;
           }
         } catch (directQueryError) {
           console.error('Direct query also failed:', directQueryError);
@@ -327,12 +386,46 @@ Overall Summary:`;
             
             if (response.success && response.message) {
               const summary = response.message.trim();
-              await recordingServiceSupabase.updateSession(sessionData.id, { summary });
-              setSession(prev => prev ? { ...prev, summary } : null);
-              console.log('✅ Summary regenerated successfully');
+              console.log('🔄 Generated summary:', summary.substring(0, 100) + '...');
+              
+              // Update the database
+              const updateSuccess = await recordingServiceSupabase.updateSession(sessionData.id, { summary });
+              
+              if (updateSuccess) {
+                console.log('✅ Summary saved to database successfully');
+                
+                // Update local state immediately
+                setSession(prev => {
+                  if (prev && prev.id === sessionData.id) {
+                    return { ...prev, summary };
+                  }
+                  return prev;
+                });
+                
+                // Reload session data to ensure consistency with database
+                console.log('🔄 Reloading session data to verify update...');
+                const updatedSession = await recordingServiceSupabase.getSessionById(sessionData.id);
+                if (updatedSession && updatedSession.summary) {
+                  setSession(updatedSession);
+                  console.log('✅ Session reloaded with updated summary');
+                } else {
+                  console.warn('⚠️ Session reloaded but summary not found - using local state');
+                }
+              } else {
+                console.error('❌ Failed to save summary to database');
+                // Still update local state as fallback
+                setSession(prev => {
+                  if (prev && prev.id === sessionData.id) {
+                    return { ...prev, summary };
+                  }
+                  return prev;
+                });
+              }
+            } else {
+              console.error('❌ AI response failed or empty');
             }
           } catch (error) {
-            console.error('Error regenerating summary:', error);
+            console.error('❌ Error regenerating summary:', error);
           }
         })();
       }
@@ -365,12 +458,12 @@ Overall Summary:`;
           session_id: sessionId as string,
           user_id: sessionData?.user_id || '',
           title: note.title,
-          content: note.content || '',
+          content: note.content || null,
           type: note.type,
           color: note.color,
           priority: note.priority,
           completed: note.completed || false,
-          image: note.image,
+          image: note.image || null,
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
         }));
@@ -519,7 +612,7 @@ Overall Summary:`;
               const { error } = await supabase
                 .from('session_sticky_notes')
                 .delete()
-                .eq('id', noteId);
+                .eq('id', noteId as any);
 
               if (error) {
                 console.error('Error deleting sticky note:', error);
@@ -606,9 +699,9 @@ Overall Summary:`;
   const handleTogglePriority = async (noteId: string, currentPriority: string) => {
     try {
       // Define priority cycle: low -> medium -> high -> low
-      const priorityCycle = ['low', 'medium', 'high'];
-      const currentIndex = priorityCycle.indexOf(currentPriority);
-      const newPriority = priorityCycle[(currentIndex + 1) % priorityCycle.length];
+      const priorityCycle: ('low' | 'medium' | 'high')[] = ['low', 'medium', 'high'];
+      const currentIndex = priorityCycle.indexOf(currentPriority as 'low' | 'medium' | 'high');
+      const newPriority = priorityCycle[(currentIndex + 1) % priorityCycle.length] as 'low' | 'medium' | 'high';
       
       // Update in database
       const success = await recordingServiceSupabase.updateSessionStickyNote(noteId, {
@@ -636,9 +729,9 @@ Overall Summary:`;
   const handleChangeNoteType = async (noteId: string, currentType: string) => {
     try {
       // Define available types
-      const availableTypes = ['exam', 'deadline', 'formula', 'definition', 'important', 'reminder'];
-      const currentIndex = availableTypes.indexOf(currentType);
-      const newType = availableTypes[(currentIndex + 1) % availableTypes.length];
+      const availableTypes: ('task' | 'focus' | 'important' | 'todo' | 'reminder' | 'exam' | 'deadline' | 'formula' | 'definition' | 'tip')[] = ['exam', 'deadline', 'formula', 'definition', 'important', 'reminder', 'task', 'focus', 'todo', 'tip'];
+      const currentIndex = availableTypes.indexOf(currentType as any);
+      const newType = availableTypes[(currentIndex + 1) % availableTypes.length] as 'task' | 'focus' | 'important' | 'todo' | 'reminder' | 'exam' | 'deadline' | 'formula' | 'definition' | 'tip';
       
       // Update in database
       const success = await recordingServiceSupabase.updateSessionStickyNote(noteId, {
@@ -691,7 +784,7 @@ Overall Summary:`;
       const { data: existingNotes, error: checkError } = await supabase
         .from('session_sticky_notes')
         .select('*')
-        .eq('session_id', session.id);
+        .eq('session_id', session.id as any);
       
       if (checkError) {
         console.error('🔄 Error checking existing notes:', checkError);
@@ -760,32 +853,113 @@ Format your response as JSON array (empty [] if no educational content found):
         const stickyNotesData = JSON.parse(response.message);
         
         if (Array.isArray(stickyNotesData) && stickyNotesData.length > 0) {
+          // Validate colors, types, and priorities according to database schema
+          const allowedColors = ['yellow', 'pink', 'green', 'blue', 'purple', 'orange', 'red'];
+          const allowedTypes = ['task', 'focus', 'important', 'todo', 'reminder', 'exam', 'deadline', 'formula', 'definition', 'tip'];
+          const allowedPriorities = ['high', 'medium', 'low'];
+          
           // Save the new sticky notes directly to session_sticky_notes table
+          let successCount = 0;
           for (const noteData of stickyNotesData) {
-            const { data: stickyNote, error: stickyNoteError } = await supabase
-              .from('session_sticky_notes')
-              .insert([
-                {
-                  session_id: session.id,
-                  user_id: session.user_id,
-                  title: noteData.title || 'Key Point',
-                  content: noteData.content || 'Important information',
-                  type: noteData.type || 'important',
-                  color: noteData.color || 'yellow',
-                  priority: noteData.priority || 'medium',
-                  completed: false,
-                  image: null,
-                }
-              ])
-              .select()
-              .single();
+            try {
+              // Validate and sanitize color
+              let validColor: 'yellow' | 'pink' | 'green' | 'blue' | 'purple' | 'orange' | 'red' = 'yellow';
+              const colorInput = (noteData.color || 'yellow').toLowerCase().trim();
+              if (allowedColors.includes(colorInput)) {
+                validColor = colorInput as typeof validColor;
+              } else {
+                console.warn(`⚠️ Invalid color "${noteData.color}", defaulting to "yellow"`);
+              }
+              
+              // Validate and sanitize type
+              let validType: 'task' | 'focus' | 'important' | 'todo' | 'reminder' | 'exam' | 'deadline' | 'formula' | 'definition' | 'tip' = 'important';
+              const typeInput = (noteData.type || 'important').toLowerCase().trim();
+              if (allowedTypes.includes(typeInput)) {
+                validType = typeInput as typeof validType;
+              } else {
+                console.warn(`⚠️ Invalid type "${noteData.type}", defaulting to "important"`);
+              }
+              
+              // Validate and sanitize priority
+              let validPriority: 'high' | 'medium' | 'low' = 'medium';
+              const priorityInput = (noteData.priority || 'medium').toLowerCase().trim();
+              if (allowedPriorities.includes(priorityInput)) {
+                validPriority = priorityInput as typeof validPriority;
+              } else {
+                console.warn(`⚠️ Invalid priority "${noteData.priority}", defaulting to "medium"`);
+              }
+              
+              // Truncate title to 255 characters (database constraint)
+              const rawTitle = noteData.title || 'Key Point';
+              const validTitle = rawTitle.length > 255 ? rawTitle.substring(0, 252) + '...' : rawTitle;
+              
+              // Sanitize content (can be null)
+              const validContent: string | null = noteData.content && noteData.content.trim() ? noteData.content.trim() : null;
+              
+              // Ensure session_id and user_id are valid
+              if (!session.id || typeof session.id !== 'string') {
+                console.error('❌ Invalid session_id:', session.id);
+                continue;
+              }
+              
+              if (!session.user_id || typeof session.user_id !== 'string') {
+                console.error('❌ Invalid user_id:', session.user_id);
+                continue;
+              }
+              
+              console.log(`📝 Inserting sticky note:`, {
+                session_id: session.id,
+                user_id: session.user_id,
+                title: validTitle.substring(0, 50) + '...',
+                type: validType,
+                color: validColor,
+                priority: validPriority
+              });
+              
+              const { data: stickyNote, error: stickyNoteError } = await supabase
+                .from('session_sticky_notes')
+                .insert([
+                  {
+                    session_id: session.id,
+                    user_id: session.user_id,
+                    title: validTitle,
+                    content: validContent,
+                    type: validType,
+                    color: validColor,
+                    priority: validPriority,
+                    completed: false,
+                    image: null,
+                  }
+                ] as any)
+                .select()
+                .single();
 
-            if (stickyNoteError) {
-              console.error('Error creating sticky note:', stickyNoteError);
-              throw stickyNoteError;
+              if (stickyNoteError) {
+                console.error('❌ Error creating sticky note:', {
+                  error: stickyNoteError,
+                  message: stickyNoteError.message,
+                  details: stickyNoteError.details,
+                  hint: stickyNoteError.hint,
+                  code: stickyNoteError.code
+                });
+                // Continue with other notes instead of throwing
+                continue;
+              }
+              
+              if (stickyNote && 'id' in stickyNote && 'title' in stickyNote) {
+                successCount++;
+                console.log('✅ Created sticky note:', (stickyNote as any).id, (stickyNote as any).title);
+              }
+            } catch (err) {
+              console.error('❌ Exception creating sticky note:', err);
+              // Continue with other notes
             }
-            
-            console.log('✅ Created sticky note:', stickyNote);
+          }
+          
+          console.log(`✅ Successfully created ${successCount} out of ${stickyNotesData.length} sticky notes`);
+          
+          if (successCount === 0) {
+            throw new Error('Failed to create any sticky notes');
           }
           
           // Reload the data
@@ -1282,26 +1456,30 @@ Format your response as JSON array (empty [] if no educational content found):
                       {/* Tap indicator */}
                       <Text style={styles.tapIndicator}>👆 Tap to read more</Text>
                       
-                      {note.content && (
-                        <Text style={styles.noteContent} numberOfLines={3}>
-                          {note.content.split(' ').map((word, wordIndex) => {
-                            // Highlight important words (dates, numbers, key terms)
-                            const isImportant = /\d+/.test(word) || 
-                                              /exam|test|quiz|deadline|due|important|key|formula|definition/.test(word.toLowerCase());
-                            return (
-                              <Text 
-                                key={wordIndex} 
-                                style={[
-                                  styles.noteWord,
-                                  isImportant && styles.highlightedWord
-                                ]}
-                              >
-                                {word}{wordIndex < note.content.split(' ').length - 1 ? ' ' : ''}
-                              </Text>
-                            );
-                          })}
-                        </Text>
-                      )}
+                      {note.content && note.content.trim() && (() => {
+                        const contentText = note.content!;
+                        const words = contentText.split(' ');
+                        return (
+                          <Text style={styles.noteContent} numberOfLines={3}>
+                            {words.map((word, wordIndex) => {
+                              // Highlight important words (dates, numbers, key terms)
+                              const isImportant = /\d+/.test(word) || 
+                                                /exam|test|quiz|deadline|due|important|key|formula|definition/.test(word.toLowerCase());
+                              return (
+                                <Text 
+                                  key={wordIndex} 
+                                  style={[
+                                    styles.noteWord,
+                                    isImportant && styles.highlightedWord
+                                  ]}
+                                >
+                                  {word}{wordIndex < words.length - 1 ? ' ' : ''}
+                                </Text>
+                              );
+                            })}
+                          </Text>
+                        );
+                      })()}
                       
                       <View style={styles.noteFooter}>
                         <TouchableOpacity

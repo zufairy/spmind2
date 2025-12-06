@@ -67,6 +67,10 @@ class AIProcessingService {
     audioUri: string, 
     onProgress?: (progress: ProcessingProgress) => void
   ): Promise<AIProcessingResult> {
+    // Declare variables outside try block so they're accessible in catch
+    let transcript: string = '';
+    let summary: string = '';
+    
     try {
       console.log('🚀 AI Processing Service - processAudio called!');
       console.log('📁 Audio URI:', audioUri);
@@ -75,8 +79,6 @@ class AIProcessingService {
       // Check if we need to use chunking
       const shouldUseChunking = await this.shouldUseChunking(audioUri);
       console.log('🔍 Should use chunking:', shouldUseChunking);
-      
-      let transcript: string;
       
       if (shouldUseChunking) {
         // Use chunking for large files
@@ -102,7 +104,7 @@ class AIProcessingService {
 
       // Step 2: Generate summary in same language(s) as transcript
       console.log('🎯 Step 2: Starting summary generation...');
-      const summary = await this.generateSummary(transcript);
+      summary = await this.generateSummary(transcript);
       console.log('✅ Step 2: Summary completed:', summary);
       
       onProgress?.({
@@ -125,16 +127,31 @@ class AIProcessingService {
       console.log('🎉 All AI processing completed successfully!');
       
       // Ensure we always return valid data
+      // If no sticky notes were generated, create one based on transcript/summary
+      let finalStickyNotes = stickyNotes;
+      if (!stickyNotes || stickyNotes.length === 0) {
+        console.log('📝 No sticky notes generated, creating AI-based summary note...');
+        try {
+          const summaryNote = await this.generateSummaryStickyNote(transcript, summary);
+          finalStickyNotes = [summaryNote];
+          console.log('✅ Generated AI-based summary sticky note');
+        } catch (error) {
+          console.error('❌ Failed to generate summary note, using fallback:', error);
+          // Fallback to a generic note only if AI generation fails
+          finalStickyNotes = [{
+            title: 'Recording Saved',
+            content: 'Your recording has been saved successfully.',
+            type: 'important' as const,
+            color: 'yellow' as const,
+            priority: 'medium' as const
+          }];
+        }
+      }
+      
       const result = {
         transcript: transcript || 'Recording completed. Transcription unavailable.',
         summary: summary || 'Recording session completed successfully.',
-        stickyNotes: stickyNotes && stickyNotes.length > 0 ? stickyNotes : [{
-          title: 'Recording Complete',
-          content: 'Your recording has been saved successfully.',
-          type: 'important' as const,
-          color: 'yellow' as const,
-          priority: 'medium' as const
-        }]
+        stickyNotes: finalStickyNotes
       };
       
       console.log('📊 Final AI results:', {
@@ -149,16 +166,31 @@ class AIProcessingService {
       
       // Return fallback data instead of throwing - this ensures session can still be created
       console.log('🔄 Returning fallback data due to AI processing error');
+      
+      // Try to generate a note from whatever transcript we have, even if partial
+      let fallbackNote: StickyNoteData = {
+        title: 'Recording Saved',
+        content: 'Your recording has been saved successfully. AI processing encountered an error.',
+        type: 'important' as const,
+        color: 'yellow' as const,
+        priority: 'medium' as const
+      };
+      
+      // If we have any transcript data, try to generate a meaningful note
+      if (transcript && transcript.length > 20) {
+        try {
+          const summaryNote = await this.generateSummaryStickyNote(transcript, 'Recording session saved. Some AI features may be unavailable.');
+          fallbackNote = summaryNote;
+          console.log('✅ Generated AI-based note even with processing error');
+        } catch (error) {
+          console.error('❌ Could not generate note from partial transcript:', error);
+        }
+      }
+      
       return {
-        transcript: 'Audio recording completed. AI processing encountered an error.',
-        summary: 'Recording session saved. Some AI features may be unavailable.',
-        stickyNotes: [{
-          title: 'Recording Saved',
-          content: 'Your recording has been saved successfully. AI processing encountered an error.',
-          type: 'important' as const,
-          color: 'yellow' as const,
-          priority: 'medium' as const
-        }]
+        transcript: transcript || 'Audio recording completed. AI processing encountered an error.',
+        summary: summary || 'Recording session saved. Some AI features may be unavailable.',
+        stickyNotes: [fallbackNote]
       };
     }
   }
@@ -947,6 +979,79 @@ Format your response as JSON array (empty [] if no educational content found):
       console.error('❌ Sticky notes extraction error:', error);
       // NO MOCK DATA - if AI fails, we fail
       throw new Error(`Real sticky notes extraction failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  }
+
+  /**
+   * Generate a single AI-based sticky note from transcript/summary
+   * Used when no educational sticky notes are extracted but we want a meaningful note
+   */
+  private async generateSummaryStickyNote(transcript: string, summary?: string): Promise<StickyNoteData> {
+    try {
+      console.log('📝 Generating AI-based summary sticky note...');
+      
+      // Detect language
+      const detectedLanguage = this.detectLanguage(transcript);
+      
+      // Use summary if available, otherwise use first part of transcript
+      const contentSource = summary || transcript.substring(0, 500);
+      
+      const prompt = `Based on this recording content, create ONE meaningful sticky note that summarizes the main topic or key takeaway.
+
+CRITICAL LANGUAGE RULE:
+- You MUST respond in the EXACT SAME language as the content
+- If the content is in Malay, you MUST respond in Malay
+- If the content is in English, you MUST respond in English
+- If the content is mixed language, respond in the same mixed language naturally
+- DO NOT translate or change the language - keep it identical
+
+REQUIREMENTS:
+1. Title: 3-5 words max, describing the main topic (in ${detectedLanguage})
+2. Content: 1 sentence max, ≤15 words, summarizing the key point (in ${detectedLanguage})
+3. Type: Choose from: important, reminder, tip, definition, or exam (based on content)
+4. Color: Choose from: yellow, pink, green, blue, purple
+5. Priority: Choose from: high, medium, low (based on importance)
+
+Content to summarize:
+${contentSource}
+
+DETECTED LANGUAGE: ${detectedLanguage}
+
+Format your response as JSON object:
+{
+  "title": "Main Topic Title in ${detectedLanguage}",
+  "content": "Key takeaway in one sentence in ${detectedLanguage}",
+  "type": "important",
+  "color": "yellow",
+  "priority": "medium"
+}`;
+
+      const response = await aiService.sendMessage(
+        [{ role: 'user', content: prompt }],
+        detectedLanguage === 'Malay' ? 'ms' : 'en'
+      );
+
+      if (!response.success || !response.message) {
+        throw new Error('AI response failed');
+      }
+
+      try {
+        const noteData = JSON.parse(response.message);
+        
+        return {
+          title: noteData.title || 'Key Point',
+          content: noteData.content || 'Important information',
+          type: this.validateNoteType(noteData.type),
+          color: this.validateNoteColor(noteData.color),
+          priority: this.validateNotePriority(noteData.priority)
+        };
+      } catch (parseError) {
+        console.error('Error parsing summary note JSON:', parseError);
+        throw new Error('Failed to parse summary note response');
+      }
+    } catch (error) {
+      console.error('❌ Error generating summary sticky note:', error);
+      throw error;
     }
   }
 
