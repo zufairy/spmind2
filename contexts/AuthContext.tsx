@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback, useMemo } from 'react';
 import { authService, User, AuthState } from '../services/authService';
+import { supabase } from '../services/supabase';
 
 interface AuthContextType extends AuthState {
   login: (email: string, password: string) => Promise<{ user: User | null; error: string | null }>;
@@ -314,8 +315,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
     try {
       console.log('🔍 AuthContext: Checking onboarding status for user:', authState.user.id);
-      
-      const { supabase } = await import('../services/supabase');
       
       // Add timeout to the database query
       const queryPromise = supabase
