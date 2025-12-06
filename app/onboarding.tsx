@@ -40,6 +40,9 @@ import CongratulationsPopup from '../components/CongratulationsPopup';
 
 const { width } = Dimensions.get('window');
 
+// Create AnimatedTextInput outside of component to prevent re-creation on each render
+const AnimatedTextInput = Animated.createAnimatedComponent(TextInput);
+
 interface Message {
   type: 'ai' | 'user';
   message: string;
@@ -442,6 +445,13 @@ export default function OnboardingScreen() {
       setConversationHistory([initialMessage]);
       setCurrentStep(0); // Reset step for chat mode
       
+      // Make input visible
+      Animated.timing(inputOpacity, {
+        toValue: 1,
+        duration: 300,
+        useNativeDriver: true,
+      }).start();
+      
       console.log('💬 Chat mode: Natural conversation started with message:', greeting);
       
       // Force scroll to bottom after a short delay
@@ -474,10 +484,17 @@ export default function OnboardingScreen() {
       setConversationHistory([initialMessage]);
       setCurrentStep(0);
       
+      // Make question text visible
+      Animated.timing(inputOpacity, {
+        toValue: 1,
+        duration: 300,
+        useNativeDriver: true,
+      }).start();
+      
       console.log('🎤 Voice mode: Starting with question:', greeting);
       
-      // Generate speech for the first question
-      await generateAndPlaySpeech(greeting);
+      // Generate speech for the first question (don't await - do in background)
+      generateAndPlaySpeech(greeting);
     }
   };
 
@@ -917,9 +934,6 @@ export default function OnboardingScreen() {
       return;
     }
 
-    setAiTyping(true);
-    setAvatarState('thoughtful');
-
     // Create user message with proper formatting
     let userMessageText = userResponse;
     if (currentStepData.id === 'birth_date' && selectedDate) {
@@ -935,18 +949,12 @@ export default function OnboardingScreen() {
       timestamp: new Date(),
     };
 
-    const newConversation = [...conversationHistory, newUserMessage];
-    setConversationHistory(newConversation);
-
     // Store the user's response in onboarding data
     let responseToStore = userResponse;
-    let messageToShow = userResponse;
     
     if (currentStepData.id === 'birth_date' && selectedDate) {
       // Store birth date in YYYY-MM-DD format for database
       responseToStore = selectedDate.toISOString().split('T')[0];
-      // Show localized format in message
-      messageToShow = selectedDate.toLocaleDateString(selectedLanguage === 'Bahasa Melayu' ? 'ms-MY' : 'en-US');
     }
     
     const stepData = {
@@ -957,114 +965,64 @@ export default function OnboardingScreen() {
     
     console.log('📝 Stored data:', stepData);
 
-    // Clear the input
+    // Clear the input immediately
     setUserResponse('');
     setSelectedMultiOptions([]);
+    
+    // INSTANT TRANSITION - Skip AI response, go directly to next question
+    if (currentStep < onboardingSteps.length - 1) {
+      const nextStep = currentStep + 1;
+      
+      // Add user message to conversation
+      const nextQuestion = getLocalizedQuestion(onboardingSteps[nextStep], selectedLanguage);
+      const nextQuestionMessage: Message = {
+        type: 'ai',
+        message: nextQuestion,
+        timestamp: new Date(),
+        hasAudio: true,
+      };
+      
+      // Update conversation and move to next step immediately
+      setConversationHistory(prev => [...prev, newUserMessage, nextQuestionMessage]);
+      setCurrentStep(nextStep);
+      
+      // Fade in input box
+      Animated.timing(inputOpacity, {
+        toValue: 1,
+        duration: 200,
+        useNativeDriver: true,
+      }).start();
+      
+      // Generate speech in background for voice mode (don't wait)
+      if (step === 'voice') {
+        generateAndPlaySpeech(nextQuestion);
+      }
+      
+      // Scroll to bottom
+      setTimeout(() => {
+        if (scrollViewRef.current) {
+          scrollViewRef.current.scrollToEnd({ animated: true });
+        }
+      }, 50);
+      
+      setIsSubmitting(false);
+      return; // Exit early - skip the AI response generation
+    }
+    
+    // Only for last step - complete onboarding
+    setConversationHistory(prev => [...prev, newUserMessage]);
+    setAiTyping(true);
+    setAvatarState('thoughtful');
 
+    // This is the LAST step - complete onboarding
     try {
-      console.log('🎤 Generating AI response for message:', newUserMessage.message);
-      console.log('🎤 Current step:', currentStep, 'User name:', userName, 'Language:', selectedLanguage);
+      console.log('✅ Last step reached, completing onboarding...');
       
-      // Get the current name from onboarding data, user response, or initial userName
-      const currentName = onboardingData.name_confirmation || onboardingData.intro || userName || newUserMessage.message || '';
-      
-      console.log('🤖 Generating AI response with context:', {
-        userMessage: newUserMessage.message,
-        currentStep,
-        currentName,
-        selectedLanguage,
-        languageCode: selectedLanguage === 'Bahasa Melayu' ? 'ms' : 'en'
-      });
-      
-      // Generate AI response using the onboarding chat service
-      const currentBirthDate = currentStepData.id === 'birth_date' && selectedDate 
-        ? selectedDate.toISOString().split('T')[0]
-        : onboardingData.birth_date;
-        
-      const aiResponse = await onboardingChatService.generateOnboardingResponse(
-        newUserMessage.message,
-        currentStep,
-        currentName,
-        selectedLanguage === 'Bahasa Melayu' ? 'ms' : 'en',
-        currentBirthDate
-      );
-      
-      console.log('🎤 AI response received:', aiResponse);
-
       setAiTyping(false);
       setAvatarState('idle');
-
-      if (aiResponse.success && aiResponse.message) {
-        const aiMessage: Message = {
-          type: 'ai',
-          message: aiResponse.message,
-          timestamp: new Date(),
-          hasAudio: true,
-        };
-
-        console.log('💬 AI response:', aiResponse.message);
-        setConversationHistory(prev => [...prev, aiMessage]);
-        
-        // In voice mode, generate speech for AI response
-        if (step === 'voice') {
-          await generateAndPlaySpeech(aiResponse.message);
-        }
-
-        // Move to next step after a longer delay to let user see AI response
-        setTimeout(async () => {
-          if (currentStep < onboardingSteps.length - 1) {
-            // Move to next step
-            const nextStep = currentStep + 1;
-            setCurrentStep(nextStep);
-            
-            // Fade in input box for next question
-            Animated.timing(inputOpacity, {
-              toValue: 1,
-              duration: 300,
-              useNativeDriver: true,
-            }).start();
-
-            // Add next question in the selected language
-            const nextQuestion = getLocalizedQuestion(onboardingSteps[nextStep], selectedLanguage);
-            const nextQuestionMessage: Message = {
-              type: 'ai',
-              message: nextQuestion,
-              timestamp: new Date(),
-              hasAudio: true,
-            };
-
-            console.log('💬 Next question:', nextQuestion);
-            setConversationHistory(prev => [...prev, nextQuestionMessage]);
-            
-            // In voice mode, generate speech for next question
-            if (step === 'voice') {
-              await generateAndPlaySpeech(nextQuestion);
-            }
-            
-            // Scroll to bottom immediately
-            if (scrollViewRef.current) {
-              scrollViewRef.current.scrollToEnd({ animated: true });
-            }
-          } else {
-            // Complete onboarding
-            console.log('✅ Onboarding complete, saving...');
-            await completeOnboarding(stepData);
-          }
-        }, 2000); // Longer delay to let user see AI response first
-
-      } else {
-        console.error('AI response failed:', aiResponse.error);
-        // Fallback response
-        const fallbackMessage: Message = {
-          type: 'ai',
-          message: selectedLanguage === 'Bahasa Melayu' 
-            ? 'Maaf, saya tidak dapat memahami. Boleh anda cuba lagi?' 
-            : 'Sorry, I didn\'t understand that. Could you try again?',
-          timestamp: new Date(),
-          hasAudio: true,
-        };
-        setConversationHistory(prev => [...prev, fallbackMessage]);
-      }
+      
+      // Complete onboarding
+      await completeOnboarding(stepData);
 
     } catch (error) {
       console.error('Chat error:', error);
@@ -1269,12 +1227,11 @@ export default function OnboardingScreen() {
     const step = onboardingSteps[currentStep];
     switch (step.type) {
       case 'text':
-        const AnimatedTextInput = Animated.createAnimatedComponent(TextInput);
         return (
-          <AnimatedTextInput
-            style={[styles.input, { opacity: inputOpacity }]}
+          <TextInput
+            style={styles.input}
             placeholder={getLocalizedPlaceholder(step, selectedLanguage)}
-            placeholderTextColor="rgba(31, 41, 55, 0.5)"
+            placeholderTextColor="rgba(107, 114, 128, 0.8)"
             value={userResponse}
             onChangeText={setUserResponse}
             autoCapitalize={step.id === 'current_school' ? 'words' : 'sentences'}
@@ -1282,9 +1239,6 @@ export default function OnboardingScreen() {
             autoFocus={false}
             editable={true}
             returnKeyType="send"
-            onFocus={() => {
-              // Ensure input can receive focus
-            }}
             onSubmitEditing={() => {
               const currentStepData = onboardingSteps[currentStep];
               const hasValidInput = currentStepData.type === 'multiselect' 
@@ -1300,8 +1254,6 @@ export default function OnboardingScreen() {
             keyboardType="default"
             textContentType="none"
             clearButtonMode="while-editing"
-            importantForAccessibility="yes"
-            accessibilityLabel="Text input"
           />
         );
       case 'select':
@@ -1595,7 +1547,7 @@ export default function OnboardingScreen() {
                 <Text style={styles.questionText}>
                   {conversationHistory.length > 0 
                     ? conversationHistory[conversationHistory.length - 1].message
-                    : getLocalizedQuestion(onboardingSteps[currentStep], selectedLanguage)}
+                    : `Hi ${userName || 'there'}! I'm Tigeria, your AI buddy! 👋 ${getLocalizedQuestion(onboardingSteps[currentStep], selectedLanguage)}`}
                 </Text>
               </View>
 
@@ -1752,7 +1704,7 @@ export default function OnboardingScreen() {
                       </Animatable.View>
                     ) : (
                       <Image 
-                        source={require('../assets/images/mic.png')} 
+                        source={require('../assets/images/menu/mic2.png')} 
                         style={styles.voiceMicIconSmall}
                         resizeMode="contain"
                       />
@@ -1887,9 +1839,9 @@ export default function OnboardingScreen() {
                     activeOpacity={0.8}
                   >
                       {loading ? (
-                        <LoadingSpinner size={16} color="#000000" />
+                        <LoadingSpinner size={16} color="#FFFFFF" />
                       ) : (
-                        <Send size={16} color="#000000" strokeWidth={2} />
+                        <Send size={16} color="#FFFFFF" strokeWidth={2.5} />
                       )}
                     </TouchableOpacity>
                 </View>
@@ -1992,37 +1944,41 @@ const styles = StyleSheet.create({
     height: 40,
     backgroundColor: 'rgba(255, 255, 255, 0.15)',
     borderRadius: 20,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 4,
     position: 'relative',
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.25)',
+    overflow: 'hidden',
   },
   switchThumb: {
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: '#00FF00',
+    backgroundColor: '#FF6D00',
     position: 'absolute',
+    top: 3,
     left: 4,
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#00FF00',
+    shadowColor: '#FF6D00',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.6,
     shadowRadius: 4,
     elevation: 8,
+    zIndex: 1,
   },
   switchThumbRight: {
     left: 44,
   },
   switchIcons: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
     flexDirection: 'row',
-    width: '100%',
-    justifyContent: 'space-around',
-    paddingHorizontal: 8,
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 12,
     zIndex: -1,
   },
   avatarSection: {
@@ -2161,34 +2117,33 @@ const styles = StyleSheet.create({
   glassInputWrapper: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F8F7FF',
+    backgroundColor: '#FFFFFF',
     borderRadius: 14,
     paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-    minHeight: 40,
+    paddingVertical: 4,
+    borderWidth: 1.5,
+    borderColor: '#D1D5DB',
+    minHeight: 52,
     gap: 8,
-    shadowColor: '#7C3AED',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.15,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.08,
     shadowRadius: 4,
     elevation: 2,
   },
   glassSendButton: {
-    width: 32,
-    height: 32,
-    borderRadius: 8,
-    backgroundColor: '#00FF00',
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    backgroundColor: '#FF6D00',
     justifyContent: 'center',
     alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#7C3AED',
-    shadowColor: '#7C3AED',
+    borderWidth: 0,
+    shadowColor: '#FF6D00',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 3,
-    elevation: 3,
+    shadowOpacity: 0.4,
+    shadowRadius: 4,
+    elevation: 4,
     marginLeft: 'auto',
   },
   progressIndicator: {
@@ -2239,13 +2194,14 @@ const styles = StyleSheet.create({
   },
   input: {
     flex: 1,
-    fontSize: 14,
+    fontSize: 15,
     fontFamily: 'Inter-Regular',
     color: '#111827',
-    paddingVertical: 8,
-    paddingHorizontal: 0,
+    paddingVertical: 10,
+    paddingHorizontal: 8,
     includeFontPadding: false,
-    minHeight: 40,
+    minHeight: 44,
+    backgroundColor: 'transparent',
   },
   sendButtonDisabled: {
     opacity: 0.5,
@@ -2585,9 +2541,8 @@ const styles = StyleSheet.create({
   // Voice Mode Styles
   voiceContainer: {
     flex: 1,
-    justifyContent: 'space-between',
-    paddingTop: 40,
-    paddingBottom: Platform.OS === 'ios' ? 10 : 8,
+    paddingTop: 16,
+    paddingBottom: Platform.OS === 'ios' ? 24 : 16,
     backgroundColor: '#FFFFFF',
     borderTopLeftRadius: 30,
     borderTopRightRadius: 30,
@@ -2648,14 +2603,14 @@ const styles = StyleSheet.create({
     minHeight: 50,
   },
   voiceSendButton: {
-    backgroundColor: '#7C3AED',
-    borderRadius: 12,
-    paddingVertical: 14,
+    backgroundColor: '#FF6D00',
+    borderRadius: 16,
+    paddingVertical: 16,
     paddingHorizontal: 32,
     alignItems: 'center',
-    shadowColor: '#7C3AED',
+    shadowColor: '#FF6D00',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
+    shadowOpacity: 0.4,
     shadowRadius: 8,
     elevation: 8,
   },
@@ -2665,10 +2620,10 @@ const styles = StyleSheet.create({
     elevation: 0,
   },
   voiceSendButtonText: {
-    fontSize: 16,
+    fontSize: 17,
     fontFamily: 'Inter-Bold',
     fontWeight: '700',
-    color: '#000000',
+    color: '#FFFFFF',
   },
   dateSelectorContainer: {
     alignItems: 'center',
@@ -2722,30 +2677,31 @@ const styles = StyleSheet.create({
   voiceAvatarSection: {
     alignItems: 'center',
     marginTop: -10,
-    height: 220,
+    height: 160,
     width: '100%',
   },
   voiceSplineViewer: {
-    width: 260,
-    height: 220,
+    width: 220,
+    height: 180,
     backgroundColor: 'transparent',
   },
   voiceLottieViewer: {
-    width: 260,
-    height: 220,
+    width: 200,
+    height: 160,
   },
   questionContainer: {
-    paddingHorizontal: 32,
+    paddingHorizontal: 28,
     alignItems: 'center',
-    marginVertical: 32,
+    marginTop: 8,
+    marginBottom: 24,
   },
   questionText: {
-    fontSize: 20,
+    fontSize: 18,
     fontFamily: 'Inter-SemiBold',
     fontWeight: '600',
-    color: '#1F2937',
+    color: '#000000',
     textAlign: 'center',
-    lineHeight: 28,
+    lineHeight: 26,
   },
   voiceResponseContainer: {
     marginHorizontal: 32,
@@ -2866,8 +2822,9 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   voiceOptionsContainer: {
-    paddingHorizontal: 24,
-    paddingBottom: 8,
+    paddingHorizontal: 20,
+    paddingTop: 16,
+    paddingBottom: 20,
     alignItems: 'center',
     width: '100%',
   },
@@ -2876,20 +2833,24 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     justifyContent: 'center',
     gap: 12,
-    marginBottom: 16,
+    marginBottom: 20,
+    paddingHorizontal: 4,
+    width: '100%',
   },
   voiceOptionButton: {
     backgroundColor: '#F3F4F6',
-    borderRadius: 12,
-    paddingHorizontal: 20,
-    paddingVertical: 14,
-    borderWidth: 1,
+    borderRadius: 16,
+    paddingHorizontal: 18,
+    paddingVertical: 12,
+    borderWidth: 1.5,
     borderColor: '#E5E7EB',
-    minWidth: 100,
+    minWidth: 130,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   voiceOptionButtonActive: {
-    backgroundColor: '#7C3AED',
-    borderColor: '#7C3AED',
+    backgroundColor: '#FF9F43',
+    borderColor: '#FF9F43',
   },
   voiceOptionButtonSubmitting: {
     opacity: 0.3,
@@ -2904,11 +2865,11 @@ const styles = StyleSheet.create({
     color: '#000000',
   },
   voiceSubmitButton: {
-    backgroundColor: '#7C3AED',
-    borderRadius: 12,
+    backgroundColor: '#FF6D00',
+    borderRadius: 16,
     paddingHorizontal: 48,
     paddingVertical: 16,
-    shadowColor: '#7C3AED',
+    shadowColor: '#FF6D00',
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.5,
     shadowRadius: 12,
@@ -2916,7 +2877,8 @@ const styles = StyleSheet.create({
     alignSelf: 'stretch',
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: 0,
+    marginTop: 8,
+    marginHorizontal: 8,
     borderWidth: 0,
   },
   voiceSubmitButtonDisabled: {
