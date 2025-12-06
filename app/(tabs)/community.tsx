@@ -314,48 +314,42 @@ export default function CommunityScreen() {
 
   return (
     <Animated.View style={[styles.container, dynamicStyles.container, { opacity: pageFadeAnim }]}>
-      {/* Header with Background Image - At the very top */}
+      {/* Header - At the very top */}
       <View style={styles.header}>
-        <Image 
-          source={require('../../assets/images/bg.jpg')}
-          style={styles.headerBackground}
-          resizeMode="cover"
-        />
-        <BlurView intensity={10} style={styles.headerBlurOverlay} />
-          <View style={styles.headerContent}>
-            <View style={styles.headerCenter}>
-              <Text style={styles.headerTitle}>Community</Text>
-            </View>
+        <View style={styles.headerContent}>
+          <View style={styles.headerCenter}>
+            <Text style={styles.headerTitle}>Community</Text>
           </View>
+        </View>
       </View>
 
       <ScrollView showsVerticalScrollIndicator={false}>
-        <LinearGradient
-          colors={['#000000', '#1a1a1a', '#000000']}
-          style={styles.gradient}
-        >
-          {/* Study with friends headline */}
-          <View style={styles.headlineContainer}>
-            <Text style={styles.headlineText}>Study with friends</Text>
-            <Animatable.View 
-              animation="bounce"
-              iterationCount="infinite"
-              duration={2000}
-              style={styles.arrowContainer}
-            >
-              <ArrowDown size={24} color="#FFFFFF" strokeWidth={2.5} />
-            </Animatable.View>
-          </View>
-
-          {/* Top game banner */}
-          <TouchableOpacity activeOpacity={0.9} onPress={() => router.push('/(tabs)/lepak')} style={styles.topBanner}>
-            <Image source={require('../../assets/images/game.png')} style={styles.topBannerImage} resizeMode="cover" />
-            <View style={styles.topBannerOverlay} />
-            <View style={styles.topBannerContent}>
-              <Text style={styles.topBannerTitle}>Join study with friends</Text>
-              <Text style={styles.topBannerSubtitle}>Tap to enter Lepak world</Text>
+        <View style={styles.gradient}>
+          {/* Study with friends heading - outside container */}
+          <Text style={styles.studyWithFriendsHeading}>Study with friends</Text>
+          
+          {/* Study with friends card */}
+          <View style={styles.studyWithFriendsCard}>
+            {/* Image container */}
+            <View style={styles.studyImageContainer}>
+              <Image 
+                source={require('../../assets/images/game.png')} 
+                style={styles.studyImage} 
+                resizeMode="cover" 
+              />
             </View>
-          </TouchableOpacity>
+            
+            {/* Join button */}
+            <TouchableOpacity 
+              activeOpacity={0.9} 
+              onPress={() => router.push('/(tabs)/lepak')} 
+              style={styles.joinStudyButton}
+            >
+              <View style={styles.joinStudyButtonInner}>
+                <Text style={styles.joinStudyButtonText}>Join Study with friends</Text>
+              </View>
+            </TouchableOpacity>
+          </View>
 
           {/* Mini Games Section */}
           <ScrollView
@@ -364,46 +358,80 @@ export default function CommunityScreen() {
             contentContainerStyle={styles.miniGamesContainer}
             style={styles.miniGamesScrollView}
           >
-            {miniGames.map((game, index) => (
-              <Animatable.View
-                key={game.id}
-                animation="fadeInUp"
-                delay={index * 150}
-                style={[styles.gameCard, dynamicStyles.gameCard]}
-              >
-                <Image source={game.image} style={styles.gameImage} />
-                <View style={styles.gameOverlay}>
-                  <View style={styles.gameContent}>
-                    <View style={styles.gameHeader}>
-                      <Text style={[styles.gameName, dynamicStyles.headerText]}>{game.name}</Text>
+            {miniGames.map((game, index) => {
+              // Split game name into words for tile display
+              const gameWords = game.name.split(' ');
+              const firstWord = gameWords[0] || '';
+              const secondWord = gameWords[1] || '';
+              
+              // Get emoji for each game
+              const getGameEmoji = (gameName: string) => {
+                if (gameName.includes('Bomb')) return '💣';
+                if (gameName.includes('Silat')) return '🥋';
+                if (gameName.includes('Spell') || gameName.includes('Bird')) return '🐦';
+                return '🎮';
+              };
+              
+              const gameEmoji = getGameEmoji(game.name);
+              
+              return (
+                <Animatable.View
+                  key={game.id}
+                  animation="fadeInUp"
+                  delay={index * 150}
+                  style={styles.wordBombCard}
+                >
+                  {/* Dark Blue Banner Section */}
+                  <View style={styles.wordBombBanner}>
+                    {/* Large Icon - Top Center */}
+                    <View style={styles.wordBombLargeIcon}>
+                      <Text style={styles.wordBombEmoji}>{gameEmoji}</Text>
                     </View>
-                    <Text style={styles.gameDescription}>{game.description}</Text>
-                    <View style={styles.gameFooter}>
-                      <View style={styles.onlineContainer}>
-                        <View style={styles.gameOnlineDot} />
-                        <Text style={[styles.gameOnlineText, dynamicStyles.subtitle]}>{game.online} playing</Text>
-                      </View>
-                      
-                      <TouchableOpacity 
-                        style={[
-                          styles.startGameButton,
-                          game.locked && styles.lockedGameButton
-                        ]}
-                        onPress={() => handleGameClick(game)}
-                      >
-                        {game.locked && <Lock size={14} color="#FFD700" />}
-                        <Text style={[
-                          styles.startGameText,
-                          game.locked && styles.lockedGameText
-                        ]}>
-                          {game.locked ? 'Locked' : 'Start Game'}
-                        </Text>
-                      </TouchableOpacity>
+                    
+                    {/* First word in tiles */}
+                    <View style={styles.wordTilesContainer}>
+                      {firstWord.split('').map((letter, i) => (
+                        <View key={i} style={styles.wordTile}>
+                          <Text style={styles.wordTileText}>{letter}</Text>
+                        </View>
+                      ))}
+                    </View>
+                    
+                    {/* Second word in bold 3D style */}
+                    {secondWord && (
+                      <Text style={styles.bombText}>{secondWord}</Text>
+                    )}
+                    
+                    {/* Small icon - bottom right */}
+                    <View style={styles.wordBombSmallIcon}>
+                      <Text style={styles.wordBombEmojiSmall}>{gameEmoji}</Text>
+                    </View>
+                    
+                    {/* Online indicator badge - bottom left */}
+                    <View style={styles.wordBombOnlineBadge}>
+                      <View style={styles.wordBombOnlineDot} />
+                      <Text style={styles.wordBombOnlineText}>{game.online} online</Text>
                     </View>
                   </View>
-                </View>
-              </Animatable.View>
-            ))}
+                  
+                  {/* Button */}
+                  <TouchableOpacity 
+                    style={styles.wordBombButton}
+                    onPress={() => handleGameClick(game)}
+                    activeOpacity={0.9}
+                  >
+                    <View style={[
+                      styles.wordBombButtonInner,
+                      game.locked && styles.wordBombButtonLocked
+                    ]}>
+                      <Text style={styles.wordBombButtonText}>
+                        {game.locked ? 'Coming Soon' : 'Start Game'}
+                      </Text>
+                    </View>
+                  </TouchableOpacity>
+                </Animatable.View>
+              );
+            })}
           </ScrollView>
 
           {/* Leaderboards headline */}
@@ -707,7 +735,7 @@ export default function CommunityScreen() {
             </View>
           </View>
         </Modal>
-        </LinearGradient>
+        </View>
       </ScrollView>
 
       {/* Locked Feature Popup */}
@@ -724,49 +752,89 @@ export default function CommunityScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#000000',
+    backgroundColor: '#FFFFFF',
   },
   gradient: {
     flex: 1,
     paddingTop: 20,
     paddingHorizontal: 16,
+    backgroundColor: '#FFFFFF',
   },
-  headlineContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 4,
+  studyWithFriendsCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 20,
+    padding: 16,
     marginBottom: 20,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 4,
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
   },
-  headlineText: {
-    fontSize: 28,
+  studyWithFriendsHeading: {
+    fontSize: 20,
+    color: '#000000',
+    fontFamily: 'Fredoka-Regular',
+    marginBottom: 16,
+    marginHorizontal: 0,
+    fontWeight: '600',
+  },
+  studyImageContainer: {
+    width: '100%',
+    height: 200,
+    marginBottom: 16,
+    borderRadius: 12,
+    overflow: 'hidden',
+    backgroundColor: '#F5F5F5',
+  },
+  studyImage: {
+    width: '100%',
+    height: '100%',
+  },
+  joinStudyButton: {
+    width: '100%',
+    borderRadius: 16,
+    overflow: 'visible',
+  },
+  joinStudyButtonInner: {
+    backgroundColor: '#58CC02',
+    borderRadius: 16,
+    paddingVertical: 14,
+    paddingHorizontal: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderBottomWidth: 4,
+    borderRightWidth: 4,
+    borderBottomColor: '#4BA600',
+    borderRightColor: '#4BA600',
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  joinStudyButtonText: {
+    fontSize: 16,
+    fontFamily: 'Fredoka-SemiBold',
     color: '#FFFFFF',
-    fontFamily: 'Bradley Hand',
-    fontStyle: 'italic',
-    textShadowColor: 'rgba(0, 0, 0, 0.3)',
-    textShadowOffset: { width: 1, height: 1 },
-    textShadowRadius: 2,
-  },
-  arrowContainer: {
-    marginRight: 8,
+    fontWeight: '600',
   },
   leaderboardHeadlineContainer: {
-    alignItems: 'center',
     marginTop: 32,
     marginBottom: 20,
+    marginHorizontal: 0,
   },
   leaderboardHeadlineText: {
-    fontSize: 28,
-    color: '#FFFFFF',
-    fontFamily: 'SpaceGrotesk-Bold',
-    fontWeight: '700',
-    textShadowColor: 'rgba(0, 0, 0, 0.3)',
-    textShadowOffset: { width: 1, height: 1 },
-    textShadowRadius: 2,
+    fontSize: 20,
+    color: '#000000',
+    fontFamily: 'Fredoka-Regular',
+    fontWeight: '600',
   },
   topBanner: {
     width: '100%',
-    height: 280,
+    aspectRatio: 16/9,
     borderRadius: 10,
     overflow: 'hidden',
     marginBottom: 16,
@@ -805,78 +873,26 @@ const styles = StyleSheet.create({
   header: {
     position: 'relative',
     overflow: 'hidden',
-    height: 90,
-    zIndex: 100,
-    marginBottom: 0,
-    shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 8,
-  },
-  headerBackground: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    width: '100%',
-    height: '100%',
-    zIndex: 1,
-  },
-  headerBlurOverlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    zIndex: 2,
-    pointerEvents: 'none',
+    zIndex: 1000,
+    elevation: 1000,
+    backgroundColor: '#000000',
   },
   headerContent: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 20,
-    paddingTop: 45,
-    paddingBottom: 10,
+    paddingTop: 50,
+    paddingBottom: 20,
     position: 'relative',
-    zIndex: 200,
-    pointerEvents: 'box-none',
-    height: '100%',
-  },
-  headerLeft: {
-    flex: 1,
-    alignItems: 'flex-start',
-    zIndex: 201,
-    pointerEvents: 'box-none',
   },
   headerCenter: {
-    flex: 1,
     alignItems: 'center',
-    zIndex: 201,
-    pointerEvents: 'box-none',
-  },
-  headerRight: {
-    flex: 1,
-    alignItems: 'flex-end',
-    zIndex: 201,
-    pointerEvents: 'box-none',
   },
   headerTitle: {
-    fontSize: 24,
-    fontFamily: 'SpaceGrotesk-Bold',
+    fontSize: 20,
     color: '#FFFFFF',
-    fontWeight: '700',
-    // Premium drop shadow style
-    textShadowColor: 'rgba(0, 0, 0, 0.8)',
-    textShadowOffset: { width: 0, height: 2 },
-    textShadowRadius: 4,
-    // Additional shadow for depth
-    shadowColor: 'rgba(0, 0, 0, 0.5)',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 1,
-    shadowRadius: 6,
+    fontFamily: 'Fredoka-Regular',
   },
   headerLogo: {
     width: 40,
@@ -1377,6 +1393,140 @@ const styles = StyleSheet.create({
   },
   lockedGameText: {
     color: '#FFD700',
+  },
+  // Word Bomb Special Design
+  wordBombCard: {
+    width: width * 0.75,
+    marginRight: 12,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    borderWidth: 2,
+    borderColor: '#E0E0E0',
+    overflow: 'hidden',
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  wordBombBanner: {
+    backgroundColor: '#1E3A8A',
+    padding: 16,
+    paddingTop: 20,
+    paddingBottom: 20,
+    position: 'relative',
+    minHeight: 140,
+  },
+  wordBombLargeIcon: {
+    position: 'absolute',
+    top: 8,
+    alignSelf: 'center',
+    zIndex: 2,
+  },
+  wordBombEmoji: {
+    fontSize: 40,
+  },
+  wordTilesContainer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 30,
+    marginBottom: 8,
+    gap: 4,
+  },
+  wordTile: {
+    width: 32,
+    height: 32,
+    backgroundColor: '#F5E6D3',
+    borderRadius: 4,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#D4C4B0',
+  },
+  wordTileText: {
+    fontSize: 18,
+    fontFamily: 'Inter-Bold',
+    color: '#333333',
+    fontWeight: '700',
+  },
+  bombText: {
+    fontSize: 32,
+    fontFamily: 'Fredoka-Bold',
+    color: '#FFA500',
+    fontWeight: '700',
+    textAlign: 'center',
+    textShadowColor: '#FF8C00',
+    textShadowOffset: { width: 2, height: 2 },
+    textShadowRadius: 4,
+    marginBottom: 8,
+  },
+  wordBombSmallIcon: {
+    position: 'absolute',
+    bottom: 8,
+    right: 12,
+    zIndex: 2,
+  },
+  wordBombEmojiSmall: {
+    fontSize: 24,
+  },
+  wordBombOnlineBadge: {
+    position: 'absolute',
+    bottom: 8,
+    left: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+    gap: 4,
+    zIndex: 2,
+  },
+  wordBombOnlineDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#00FF00',
+  },
+  wordBombOnlineText: {
+    fontSize: 11,
+    fontFamily: 'Inter-Medium',
+    color: '#000000',
+    fontWeight: '500',
+  },
+  wordBombButton: {
+    width: '100%',
+    borderRadius: 0,
+    overflow: 'visible',
+  },
+  wordBombButtonInner: {
+    backgroundColor: '#58CC02',
+    paddingVertical: 14,
+    paddingHorizontal: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderBottomWidth: 4,
+    borderRightWidth: 4,
+    borderBottomColor: '#4BA600',
+    borderRightColor: '#4BA600',
+    borderRadius: 12,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  wordBombButtonLocked: {
+    backgroundColor: '#FF8C42',
+    borderBottomColor: '#E55A2B',
+    borderRightColor: '#E55A2B',
+  },
+  wordBombButtonText: {
+    fontSize: 16,
+    fontFamily: 'Fredoka-SemiBold',
+    color: '#FFFFFF',
+    fontWeight: '600',
   },
   // Loading styles
   loadingContainer: {

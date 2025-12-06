@@ -19,6 +19,7 @@ import { LoginCredentials, authService } from '../../services/authService';
 import { LoadingSpinner } from '../../components/LoadingSpinner';
 import { useAuth } from '../../contexts/AuthContext';
 import { StarryBackground } from '../../components/StarryBackground';
+import { supabase } from '../../services/supabase';
 
 export default function LoginScreen() {
   const router = useRouter();
@@ -59,6 +60,46 @@ export default function LoginScreen() {
     ]).start();
   }, []);
 
+  const checkOnboardingAndNavigate = async (userId: string) => {
+    try {
+      console.log('🔍 LoginScreen: Checking onboarding status for user:', userId);
+      
+      // Query database for onboarding status
+      const { data, error } = await supabase
+        .from('users')
+        .select('onboarding_completed')
+        .eq('id', userId as any)
+        .maybeSingle();
+      
+      if (error) {
+        console.error('❌ LoginScreen: Error checking onboarding:', error);
+        // On error, assume needs onboarding for safety
+        router.replace('/onboarding');
+        return;
+      }
+      
+      if (!data || typeof data !== 'object' || !('onboarding_completed' in data)) {
+        console.log('⚠️ LoginScreen: No user profile found, needs onboarding');
+        router.replace('/onboarding');
+        return;
+      }
+      
+      const onboardingCompleted = (data as { onboarding_completed: boolean | null }).onboarding_completed;
+      
+      if (onboardingCompleted === true) {
+        console.log('✅ LoginScreen: Onboarding completed, navigating to home');
+        router.replace('/(tabs)/home');
+      } else {
+        console.log('➡️ LoginScreen: Onboarding not completed, navigating to onboarding');
+        router.replace('/onboarding');
+      }
+    } catch (error) {
+      console.error('❌ LoginScreen: Exception checking onboarding:', error);
+      // On exception, navigate to onboarding for safety
+      router.replace('/onboarding');
+    }
+  };
+
   const handleGoogleLogin = async () => {
     setLoading(true);
     try {
@@ -67,8 +108,8 @@ export default function LoginScreen() {
       if (error) {
         Alert.alert('Google Login Failed', error);
       } else if (user) {
-        // Navigate to main app
-        router.replace('/(tabs)/home');
+        // Check onboarding status and navigate accordingly
+        await checkOnboardingAndNavigate(user.id);
       }
     } catch (error) {
       Alert.alert('Error', 'An unexpected error occurred during Google login');
@@ -106,9 +147,9 @@ export default function LoginScreen() {
         // Show user-friendly error message
         Alert.alert('Login Failed', errorMessage);
       } else if (user) {
-        console.log('✅ LoginScreen: Login successful, navigating to home...');
-        // Navigate to main app
-        router.replace('/(tabs)/home');
+        console.log('✅ LoginScreen: Login successful, checking onboarding status...');
+        // Check onboarding status and navigate accordingly
+        await checkOnboardingAndNavigate(user.id);
       } else {
         console.warn('⚠️ LoginScreen: No user returned, no error');
         Alert.alert('Login Failed', 'Unable to complete login. Please try again.');

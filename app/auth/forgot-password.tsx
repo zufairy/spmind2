@@ -151,7 +151,7 @@ export default function ForgotPasswordScreen() {
           {/* Hero Image */}
           <View style={styles.heroSection}>
             <Image 
-              source={require('../../assets/images/logow.png')}
+              source={require('../../assets/images/Logo_Long.png')}
               style={styles.heroImage}
               resizeMode="contain"
             />

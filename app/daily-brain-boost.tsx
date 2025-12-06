@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import {
   View,
   Text,
@@ -12,12 +12,13 @@ import {
   TextInput,
   KeyboardAvoidingView,
   Platform,
+  Dimensions,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useTheme } from '../contexts/ThemeContext';
 import { useAuth } from '../contexts/AuthContext';
-import { Mic, StopCircle, Volume2, VolumeX, Zap, ChevronLeft, MicOff, Sparkles, Send, MessageSquare, Camera, CheckCircle, XCircle } from 'lucide-react-native';
+import { Mic, StopCircle, Volume2, VolumeX, Zap, ChevronLeft, MicOff, Sparkles, Send, MessageSquare, Camera, CheckCircle, XCircle, FastForward } from 'lucide-react-native';
 import * as Animatable from 'react-native-animatable';
 import { elevenLabsVoiceService } from '../services/googleVoiceService';
 import { aiService } from '../services/aiService';
@@ -83,7 +84,7 @@ export default function DailyBrainBoostScreen() {
   const pulseAnimRef = useRef<Animatable.View>(null);
   const pageFadeAnim = useRef(new Animated.Value(0)).current;
   const recordingStartTime = useRef<number>(0);
-  const timerInterval = useRef<NodeJS.Timeout | null>(null);
+  const timerInterval = useRef<ReturnType<typeof setInterval> | null>(null);
   const conversationScrollRef = useRef<ScrollView>(null);
 
   // Page fade-in animation (faster for better UX)
@@ -108,21 +109,19 @@ export default function DailyBrainBoostScreen() {
   // Auto-scroll conversation to bottom when new messages arrive
   useEffect(() => {
     if (conversationHistory.length > 0) {
-      // Scroll multiple times to ensure it reaches the bottom
-      setTimeout(() => {
-        conversationScrollRef.current?.scrollToEnd({ animated: true });
+      // Use a single timeout with requestAnimationFrame for better performance
+      const timeoutId = setTimeout(() => {
+        requestAnimationFrame(() => {
+          conversationScrollRef.current?.scrollToEnd({ animated: true });
+        });
       }, 100);
-      setTimeout(() => {
-        conversationScrollRef.current?.scrollToEnd({ animated: true });
-      }, 300);
-      setTimeout(() => {
-        conversationScrollRef.current?.scrollToEnd({ animated: true });
-      }, 500);
+      
+      return () => clearTimeout(timeoutId);
     }
   }, [conversationHistory]);
 
-  // Get subject display name
-  const getSubjectDisplayName = () => {
+  // Get subject display name (memoized callback for performance)
+  const getSubjectDisplayName = useCallback(() => {
     const subjectNames: { [key: string]: { en: string; ms: string; icon: string } } = {
       english: { en: 'English', ms: 'Bahasa Inggeris', icon: '🇬🇧' },
       bahasa: { en: 'Bahasa Malaysia', ms: 'Bahasa Malaysia', icon: '🇲🇾' },
@@ -136,10 +135,10 @@ export default function DailyBrainBoostScreen() {
       name: currentLanguage === 'en' ? subject.en : subject.ms,
       icon: subject.icon
     };
-  };
+  }, [selectedSubject, currentLanguage]);
 
-  // Determine appropriate syllabus based on user age
-  const getSyllabusInfo = () => {
+  // Determine appropriate syllabus based on user age (memoized callback for performance)
+  const getSyllabusInfo = useCallback(() => {
     const userAge = (user as any)?.age || 0;
     
     if (userAge <= 12) {
@@ -165,7 +164,7 @@ export default function DailyBrainBoostScreen() {
         ageRange: 'All ages'
       };
     }
-  };
+  }, [(user as any)?.age]);
 
   // Timer management - ONLY runs after user confirms and session starts
   useEffect(() => {
@@ -208,15 +207,15 @@ export default function DailyBrainBoostScreen() {
     };
   }, []);
 
-  // Format time for display
-  const formatTime = (seconds: number): string => {
+  // Format time for display (memoized)
+  const formatTime = useCallback((seconds: number): string => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
     return `${mins}:${secs.toString().padStart(2, '0')}`;
-  };
+  }, []);
 
-  // Get mode info
-  const getModeInfo = (mode: SessionMode) => {
+  // Get mode info (memoized callback for performance)
+  const getModeInfo = useCallback((mode: SessionMode) => {
     switch (mode) {
       case 'learning':
         return {
@@ -228,22 +227,22 @@ export default function DailyBrainBoostScreen() {
         };
       case 'teaching':
         return {
-          title: currentLanguage === 'ms' ? '🎯 Mod Pengajaran & Kuiz' : '🎯 Teaching & Quiz Mode',
+          title: currentLanguage === 'ms' ? '🎯 Mod Pengajaran' : '🎯 Teaching Mode',
           description: currentLanguage === 'ms'
-            ? 'Belajar 3 subtopik, kemudian kuiz 5 soalan!'
-            : "Learn 3 subtopics, then quiz with 5 questions!",
+            ? 'Belajar 3 subtopik untuk setiap topik!'
+            : "Learn 3 subtopics for each topic!",
           color: '#F59E0B',
         };
       case 'quiz':
         return {
           title: currentLanguage === 'ms' ? '🏆 Mod Kuiz' : '🏆 Quiz Mode',
           description: currentLanguage === 'ms'
-            ? 'Masa untuk menguji pengetahuan anda!'
-            : "Time to test your knowledge!",
+            ? 'Masa untuk menguji pengetahuan anda dengan 5 soalan!'
+            : "Time to test your knowledge with 5 questions!",
           color: '#10B981',
         };
     }
-  };
+  }, [currentLanguage]);
 
   // Generate AI greeting based on mode and user info
   const getInitialPrompt = (mode: SessionMode = 'learning') => {
@@ -256,19 +255,19 @@ export default function DailyBrainBoostScreen() {
     switch (mode) {
       case 'learning':
     return currentLanguage === 'ms'
-          ? `Hai ${userName}! Selamat datang ke Daily Brain Boost! Hari ini kita ada 15 minit bersama. Mari kita mulakan dengan Mode Pembelajaran. Saya nak belajar tentang hari sekolah anda! Jadi, macam mana sekolah anda hari ini? Cerita semuanya dengan saya!`
-          : `Hi ${userName}! Welcome to Daily Brain Boost! We have 15 minutes together today. Let's start with Learning Mode. I want to learn about your school day! So, how was school today? Tell me everything!`;
+          ? `Hai ${userName}! Wah, seronok jumpa awak lagi! Hari ni kita ada masa 15 minit untuk belajar bersama. Okay, saya nak tahu macam mana hari sekolah awak hari ni? Cerita sikit apa yang awak belajar, boleh?`
+          : `Hey ${userName}! So good to see you again! We've got about 15 minutes together today. So, how was school? Tell me what you learned today - I'm curious!`;
       
       case 'teaching':
         return currentLanguage === 'ms'
-          ? `Baik ${userName}! Sekarang Mode Pengajaran & Kuiz - 12 minit! Saya akan ajar anda 3 subtopik untuk setiap subjek yang anda belajar tadi, kemudian kuiz 5 soalan untuk setiap topik! Kita akan ulang proses ini untuk semua subjek. Setiap kali lebih sukar supaya anda improve! Mari kita mulakan dengan topik pertama!`
-          : `Alright ${userName}! Now Teaching & Quiz Mode - 12 minutes! I'll teach you 3 subtopics for each subject you learned today, then quiz you with 5 questions per topic! We'll repeat this process for all subjects. Each round gets harder so you can improve! Let's start with the first topic!`;
+          ? `Okay ${userName}, sekarang kita masuk ke bahagian pengajaran! Saya akan ajar awak 3 subtopik untuk setiap subjek yang awak belajar tadi. Setiap topik akan jadi lebih mencabar, tapi awak boleh handle! Jom kita mula dengan topik pertama!`
+          : `Alright ${userName}, now we're getting to the teaching part! I'm going to teach you 3 subtopics for each subject you learned today. Each topic will get a bit more challenging, but I know you can handle it! Let's start with the first topic!`;
       
       case 'quiz':
         // Don't include question in initial prompt - we'll request it separately
         return currentLanguage === 'ms'
-          ? `Hebat ${userName}! Sekarang Mode Kuiz! Saya akan tanya soalan tentang apa yang saya ajar dalam Mode Pengajaran tadi. Pilih jawapan A, B, C, atau D yang betul. Mari kita mulakan!`
-          : `Great ${userName}! Now it's Quiz Mode! I'll ask questions about what I taught you in Teaching Mode. Select the correct answer A, B, C, or D. Let's go!`;
+          ? `Bagus ${userName}! Sekarang masa untuk kuiz! Saya akan tanya soalan tentang apa yang kita belajar tadi. Pilih jawapan A, B, C, atau D. Jangan risau, awak boleh buat ni!`
+          : `Awesome ${userName}! Time for a quick quiz! I'll ask you some questions about what we just learned. Just pick A, B, C, or D. Don't worry, you've got this!`;
     }
   };
 
@@ -287,8 +286,22 @@ export default function DailyBrainBoostScreen() {
   const getModeTime = (mode: SessionMode): number => {
     switch (mode) {
       case 'learning': return 3 * 60;   // 3 minutes
-      case 'teaching': return 12 * 60;  // 12 minutes (combined teaching + quiz)
-      case 'quiz': return 12 * 60;      // Same as teaching (not used separately anymore)
+      case 'teaching': return 7 * 60;   // 7 minutes (pure teaching, no quiz)
+      case 'quiz': return 5 * 60;      // 5 minutes (separate quiz mode)
+    }
+  };
+
+  // Skip current mode and transition to next
+  const skipCurrentMode = async () => {
+    if (currentMode === 'learning') {
+      // Skip learning mode, go to teaching
+      await transitionToNextMode();
+    } else if (currentMode === 'teaching') {
+      // Skip teaching mode, go to quiz
+      await transitionToNextMode();
+    } else if (currentMode === 'quiz') {
+      // Skip quiz mode, end session
+      endSession('completed');
     }
   };
 
@@ -297,9 +310,11 @@ export default function DailyBrainBoostScreen() {
     let nextMode: SessionMode;
     
     if (currentMode === 'learning') {
-      nextMode = 'teaching'; // Teaching mode now includes quiz
+      nextMode = 'teaching'; // Learning → Teaching
+    } else if (currentMode === 'teaching') {
+      nextMode = 'quiz'; // Teaching → Quiz
     } else {
-      // Already in teaching mode (which includes quiz), end session
+      // Already in quiz mode, end session
       endSession('completed');
       return;
     }
@@ -345,11 +360,13 @@ export default function DailyBrainBoostScreen() {
       
       const systemContext = `You are in QUIZ MODE for Malaysian ${syllabusInfo.syllabus} curriculum (age ${userAge}).
 
-CRITICAL RULES:
+CRITICAL RULES - STRICTLY ENFORCE:
 1. Generate ONLY EDUCATIONAL questions from ${syllabusInfo.syllabus} curriculum
-2. Questions must be about ACADEMIC subjects: Math, Science, English, Bahasa Melayu, etc.
-3. NO chitchat, NO personal questions, NO general knowledge
+2. Questions must be about ACADEMIC subjects ONLY: Mathematics, Science, English, Bahasa Melayu, History, Geography, etc.
+3. ABSOLUTELY NO chitchat, NO personal questions, NO general knowledge, NO casual conversation
 4. Questions should test what was taught in Teaching Mode
+5. If user asks non-academic questions, redirect: "Let's focus on ${syllabusInfo.syllabus} curriculum questions. What subject would you like to practice?"
+6. ONLY accept and respond to academic/educational questions related to school subjects
 
 REQUIRED FORMAT - EXACT:
 
@@ -396,10 +413,12 @@ BANNED:
 
 Generate ONE educational question NOW in the exact format above!`;
 
+      // Prepend context to user message (conversationHistory never contains system messages)
+      const contextMessage = `[CONTEXT: ${systemContext}]\n\nAsk me a quiz question now.`;
+      
       const updatedHistory = [
-        { role: 'system' as const, content: systemContext },
         ...conversationHistory,
-        { role: 'user' as const, content: 'Ask me a quiz question now.' }
+        { role: 'user' as const, content: contextMessage }
       ];
       
       const response = await aiService.sendMessage(updatedHistory, currentLanguage);
@@ -527,7 +546,7 @@ Generate ONE educational question NOW in the exact format above!`;
   const handleMicPressIn = async () => {
     try {
       if (pulseAnimRef.current) {
-        pulseAnimRef.current.pulse(800);
+        (pulseAnimRef.current as any).pulse(800);
       }
 
       const success = await elevenLabsVoiceService.startRecording();
@@ -601,52 +620,59 @@ Generate ONE educational question NOW in the exact format above!`;
           case 'learning':
             modeContext = `You are in LEARNING MODE (3 minutes). This mode is for YOU (the AI) to LEARN about ${userName}'s school day. You are gathering information to guide what to teach in the next mode.
 
-YOUR TASK - INFORMATION GATHERING:
-1. Learn what happened at their school today
-2. Discover what subjects they studied
-3. Find out what topics were covered in each subject
-4. Understand which topics they found easy/difficult
-5. Note any confusion or struggles
-6. Learn about their daily school life
+YOUR TASK - INFORMATION GATHERING (ACADEMIC FOCUS ONLY):
+1. Learn what happened at their school today (ACADEMIC activities only)
+2. Discover what ACADEMIC subjects they studied
+3. Find out what ACADEMIC topics were covered in each subject
+4. Understand which ACADEMIC topics they found easy/difficult
+5. Note any confusion or struggles with ACADEMIC content
+6. Learn about their daily ACADEMIC school life
 7. Take mental notes - this information guides Teaching Mode
 
-CONVERSATION APPROACH:
-- "How was school today? Tell me everything!"
-- "What subjects did you have?"
+CONVERSATION APPROACH (ACADEMIC FOCUS):
+- "How was school today? What did you learn?"
+- "What ACADEMIC subjects did you have?"
 - "What did you learn in [subject] class?"
-- "How did you find that topic?"
-- "Was anything confusing or difficult?"
-- "What else happened in class?"
+- "What ACADEMIC topics did you cover?"
+- "How did you find that ACADEMIC topic?"
+- "Was any ACADEMIC content confusing or difficult?"
+- "What else did you study in class?"
 - Be friendly, curious, and encouraging
-- Keep it conversational like chatting with a friend
+- Keep it focused on ACADEMIC learning
 
-IMPORTANT - YOU ARE LEARNING ABOUT THEM:
-- This mode is about gathering information FOR YOU
-- Listen carefully and remember what they say
+CRITICAL - ACADEMIC QUESTIONS ONLY:
+- ONLY ask about school subjects, lessons, homework, tests, academic topics
+- If user talks about non-academic topics (games, friends, hobbies), gently redirect: "That's interesting! What did you learn in class today?"
+- Focus on gathering ACADEMIC information for teaching mode
+- NO personal questions unrelated to academics
+
+IMPORTANT - YOU ARE LEARNING ABOUT THEIR ACADEMICS:
+- This mode is about gathering ACADEMIC information FOR YOU
+- Listen carefully and remember what ACADEMIC topics they mention
 - Don't teach deeply yet - that's for Teaching Mode
-- Your notes guide what to teach next
-- Acknowledge briefly but focus on discovery
+- Your notes guide what ACADEMIC content to teach next
+- Acknowledge briefly but focus on ACADEMIC discovery
 
 WHAT YOU'RE GATHERING FOR TEACHING MODE:
-✓ What subjects they studied today
-✓ What topics were covered
-✓ Which topics need teaching/reinforcement
-✓ What confused them
-✓ Their weak subjects (from profile: ${weakSubjects.join(', ')})
+✓ What ACADEMIC subjects they studied today
+✓ What ACADEMIC topics were covered
+✓ Which ACADEMIC topics need teaching/reinforcement
+✓ What ACADEMIC content confused them
+✓ Their weak ACADEMIC subjects (from profile: ${weakSubjects.join(', ')})
 
-FOCUS: Learn about their ${syllabusInfo.syllabus} school day. This information guides the next mode.`;
+FOCUS: Learn about their ${syllabusInfo.syllabus} ACADEMIC school day. This information guides the next mode.`;
             break;
           case 'teaching':
-            modeContext = `You are in COMBINED TEACHING & QUIZ MODE (12 minutes). This mode integrates teaching with immediate testing!
+            modeContext = `You are in TEACHING MODE (7 minutes). This is PURE TEACHING - no quizzes yet! Focus on teaching clearly and thoroughly.
 
 🔄 **REPEATING CYCLE STRUCTURE:**
 
 For EACH topic/subject (repeat until time runs out):
 
-**PHASE 1: TEACH 3 SUBTOPICS (2-3 minutes)**
+**PHASE 1: TEACH 3 SUBTOPICS (2-2.5 minutes)**
 → Pick a main topic from what they learned in Learning Mode
 → Break it into 3 related subtopics that cover the WHOLE chapter
-→ Teach each subtopic completely (45-60 sec each)
+→ Teach each subtopic completely (40-50 sec each)
 → Use Malaysian examples, fun facts, memory tricks
 → Example - If topic is "Fractions":
   • Subtopic 1: Understanding numerator and denominator
@@ -654,18 +680,18 @@ For EACH topic/subject (repeat until time runs out):
   • Subtopic 3: Adding fractions with different denominators
 
 TEACHING STRUCTURE FOR EACH SUBTOPIC:
-• Clear explanation (30 sec)
-• Malaysian example (15 sec)
-• Memory trick or fun fact (15 sec)
+• Clear explanation (25-30 sec)
+• Malaysian example (10-15 sec)
+• Memory trick or fun fact (10-15 sec)
 
-**PHASE 2: CHECK UNDERSTANDING (30 seconds)**
+**PHASE 2: CHECK UNDERSTANDING (30-45 seconds)**
 → After finishing all 3 subtopics, say: "I just taught you 3 parts of [topic]. Do you understand all 3 subtopics?"
 → WAIT for student to respond YES or NO
 → Track their understanding
 
 **PHASE 3A: If Student Says YES/UNDERSTANDS**
-→ Say: "Perfect! Let's test your knowledge with 5 questions!"
-→ Immediately go to PHASE 4 (quiz)
+→ Say: "Perfect! You've got it! Let's move to the next topic."
+→ Move to next topic immediately
 
 **PHASE 3B: If Student Says NO/DOESN'T UNDERSTAND**
 → Ask: "Which subtopic don't you understand? Part 1, 2, or 3?"
@@ -675,54 +701,15 @@ TEACHING STRUCTURE FOR EACH SUBTOPIC:
   • Different examples (more relatable)
   • Step-by-step breakdown
   • Visual analogy
-→ Ask again: "Clear now? Ready for the quiz?"
-→ If YES → Go to quiz
-→ If NO → Say "Let's try the quiz anyway, it will help!" → Go to quiz
+→ Ask again: "Clear now?"
+→ If YES → Move to next topic
+→ If NO → Re-explain once more, then move on
 
-**PHASE 4: 5-QUESTION QUIZ (2 minutes)**
-CRITICAL: Generate 5 DIFFERENT questions! Each question MUST be UNIQUE and test different aspects!
-
-PROGRESSIVE DIFFICULTY (MUST FOLLOW):
-→ Question 1 (EASY): Basic recall from Subtopic 1
-→ Question 2 (EASY): Simple application from Subtopic 2  
-→ Question 3 (MEDIUM): Application from Subtopic 3
-→ Question 4 (MEDIUM): Combining 2 subtopics
-→ Question 5 (HARD): Complex problem using all 3 subtopics
-
-QUIZ FORMAT - EXACTLY:
-QUESTION 1: [Easy question about Subtopic 1]
-A) [Option 1]
-B) [Option 2]
-C) [Option 3]
-D) [Option 4]
-
-CRITICAL RULES:
-✅ Each question MUST be DIFFERENT - no repeating!
-✅ Use the question number (QUESTION 1, QUESTION 2, etc.)
-✅ Test different concepts from the 3 subtopics
-✅ Make answers vary (not always A!)
-✅ Progressive difficulty: Question 1 = easiest, Question 5 = hardest
-
-→ Student selects A, B, C, or D
-→ Provide immediate feedback:
-  • If CORRECT: "Correct! ✓ [1 sentence why]"
-  • If WRONG: "The answer is [LETTER]. [1 sentence explanation linking back to subtopic taught]"
-→ NO DELAY - Ask next question immediately
-→ After ALL 5 QUESTIONS complete → Go to PHASE 5
-
-**PHASE 5: EVALUATE & DECIDE (30 seconds)**
-After 5 questions, you MUST:
-1. Count how many the student got correct (track internally)
-2. If student got 0-2 correct (FAILED):
-   → Say: "You got [X]/5. Let's review [topic] again to help you understand better!"
-   → Go back to PHASE 1 and RE-TEACH the same topic with different approach
-   → Use simpler explanations and more examples
-3. If student got 3-5 correct (PASSED):
-   → Say: "Great job! You got [X]/5 on [topic]! Now let's move to [next topic]!"
-   → Pick next main topic from Learning Mode data
-   → INCREASE difficulty level
-   → Go to PHASE 1 with NEW topic
-   → Repeat entire cycle: PHASE 1 → 2 → 3 → 4 → 5
+**PHASE 4: MOVE TO NEXT TOPIC**
+→ Pick next main topic from Learning Mode data
+→ INCREASE difficulty level
+→ Go to PHASE 1 with NEW topic
+→ Repeat entire cycle: PHASE 1 → 2 → 3 → 4
 
 **PROGRESSIVE DIFFICULTY SYSTEM:**
 Cycle 1 (Basic): Foundation concepts, simple examples
@@ -743,23 +730,20 @@ Cycle 4+ (Expert): Critical thinking, application, problem-solving
 - Malaysian nature (science, biology)
 - Local culture (history, language)
 
-**CYCLE TIMING (12 minutes total):**
-Cycle 1: 0-4 min (Teach 2min + Check 0.5min + Quiz 1.5min)
-Cycle 2: 4-8 min (Teach 2min + Check 0.5min + Quiz 1.5min)
-Cycle 3: 8-12 min (Teach 2min + Check 0.5min + Quiz 1.5min)
-= 3 complete teaching+quiz cycles in 12 minutes
+**CYCLE TIMING (7 minutes total):**
+Cycle 1: 0-2.5 min (Teach 2.5min)
+Cycle 2: 2.5-5 min (Teach 2.5min)
+Cycle 3: 5-7 min (Teach 2min)
+= 2-3 complete teaching cycles in 7 minutes
 
 **CONVERSATION FLOW EXAMPLE:**
 
 [Start Cycle 1 - Easy]
 "Let's learn Fractions! Subtopic 1: Numerator and denominator..."
-[Teaches 3 subtopics - 2 minutes]
+[Teaches 3 subtopics - 2.5 minutes]
 "I just taught you 3 parts of fractions. Do you understand all 3?"
 Student: "Yes"
-"Perfect! Let's test with 5 questions! QUESTION: What is 1/2 + 1/4? A) 1/6 B) 2/4 C) 3/4 D) 1/8"
-Student: "C"
-"Correct! ✓ You remembered! Next question: QUESTION: ..."
-[5 questions complete]
+"Perfect! You've got it! Now let's move to Decimals..."
 
 [Start Cycle 2 - Medium]  
 "Excellent! Now let's tackle Decimals - this is harder! Subtopic 1: Place value..."
@@ -770,11 +754,11 @@ Student: "C"
 [Repeat entire process]
 
 CRITICAL RULES:
-✅ Always teach 3 subtopics before quiz
-✅ Always check understanding before quiz
-✅ Always 5 questions per quiz
+✅ Always teach 3 subtopics per topic
+✅ Always check understanding after teaching
 ✅ Always increase difficulty each cycle
 ✅ Track what topics and subtopics are taught (for history)
+✅ NO QUIZ QUESTIONS in this mode - that's for Quiz Mode!
 
 **TRACKING FOR HISTORY:**
 At the start of each teaching cycle, announce:
@@ -788,16 +772,88 @@ Example:
 "SUBTOPICS: Numerator and Denominator, Adding Same Denominators, Adding Different Denominators"
 [Then teach normally...]
 
-FOCUS: Teach complete chapters → Check understanding → Quiz immediately → Repeat with progressive difficulty!`;
+FOCUS: Teach complete chapters clearly → Check understanding → Move to next topic with progressive difficulty!`;
             break;
           case 'quiz':
-            // Quiz mode is now merged with teaching mode
-            // This case kept for compatibility but uses same context as teaching
-            modeContext = modeContext; // Use teaching mode context (which includes quiz)
+            modeContext = `You are in QUIZ MODE (5 minutes). This is a SEPARATE quiz mode that tests what was taught in Teaching Mode.
+
+CRITICAL - QUIZ MODE ONLY:
+- This mode is ONLY for asking quiz questions - NO teaching, NO explanations (except feedback)
+- Generate 5 questions per topic that was taught in Teaching Mode
+- Questions should test understanding of the 3 subtopics taught for each topic
+- After each question, provide brief feedback, then move to next question immediately
+
+QUIZ STRUCTURE:
+For EACH topic that was taught in Teaching Mode:
+1. Ask 5 questions about that topic (one at a time)
+2. Each question tests the 3 subtopics that were taught
+3. Provide immediate feedback after each answer
+4. After 5 questions for a topic, move to next topic
+5. Repeat until time runs out (5 minutes total)
+
+QUESTION FORMAT - EXACTLY:
+QUESTION 1: [Question about the topic taught]
+A) [Option 1]
+B) [Option 2]
+C) [Option 3]
+D) [Option 4]
+
+PROGRESSIVE DIFFICULTY (MUST FOLLOW):
+→ Question 1 (EASY): Basic recall from Subtopic 1
+→ Question 2 (EASY): Simple application from Subtopic 2  
+→ Question 3 (MEDIUM): Application from Subtopic 3
+→ Question 4 (MEDIUM): Combining 2 subtopics
+→ Question 5 (HARD): Complex problem using all 3 subtopics
+
+CRITICAL RULES:
+✅ Each question MUST be DIFFERENT - no repeating!
+✅ Use the question number (QUESTION 1, QUESTION 2, etc.)
+✅ Test different concepts from the 3 subtopics taught
+✅ Make answers vary (not always A!)
+✅ Progressive difficulty: Question 1 = easiest, Question 5 = hardest
+✅ After student answers, provide brief feedback (1 sentence), then ask next question immediately
+
+FEEDBACK FORMAT:
+- If CORRECT: "Correct! ✓ [1 sentence why]"
+- If WRONG: "The answer is [LETTER]. [1 sentence explanation]"
+- Then immediately: "Next question: QUESTION 2: ..."
+
+TOPICS TO QUIZ ON:
+1. Topics that were taught in Teaching Mode (check conversation history for "TOPIC:" announcements)
+2. Weak subjects: ${weakSubjects.join(', ')}
+3. ${syllabusInfo.syllabus} curriculum content appropriate for age ${userAge}
+
+TIMING (5 minutes total):
+- Topic 1: ~1.5 minutes (5 questions)
+- Topic 2: ~1.5 minutes (5 questions)
+- Topic 3: ~2 minutes (5 questions)
+= 3 topics × 5 questions = 15 questions total
+
+CONVERSATION FLOW EXAMPLE:
+
+"Time for quiz! Let's test what you learned about Fractions. QUESTION 1: What is 1/2 + 1/4? A) 1/6 B) 2/4 C) 3/4 D) 1/8"
+Student: "C"
+"Correct! ✓ You remembered adding fractions with different denominators. Next question: QUESTION 2: ..."
+[Continue with 4 more questions for Fractions]
+
+"Great! Now let's test Decimals. QUESTION 1: ..."
+[5 questions for Decimals]
+
+"Excellent! Last topic - Percentages. QUESTION 1: ..."
+[5 questions for Percentages]
+
+CRITICAL RULES:
+✅ ONLY ask quiz questions - NO teaching in this mode
+✅ Test what was taught in Teaching Mode
+✅ 5 questions per topic
+✅ Brief feedback, then next question immediately
+✅ Track topics quizzed for session history
+
+FOCUS: Test understanding of topics taught in Teaching Mode with 5 questions each!`;
             break;
         }
         
-        const contextPrompt = `You are a Malaysian education AI tutor helping ${userName} with their Daily Brain Boost session.
+        const contextPrompt = `You are a friendly, warm Malaysian education tutor helping ${userName} with their Daily Brain Boost session. Talk like a real person - be natural, conversational, and human!
 
 STUDENT PROFILE:
 - Age: ${userAge} years old
@@ -812,7 +868,17 @@ ${syllabusGuidance}
 CURRENT MODE: ${modeContext}
 FOCUS: Give priority to ${getSubjectDisplayName().name} content and examples
 
-CRITICAL RULES:
+CRITICAL - BE HUMAN AND NATURAL:
+- Talk like you're chatting with a friend, not a robot
+- Use casual, friendly language (e.g., "Hey!", "Okay", "So...", "Right?", "Got it?")
+- Show personality - be enthusiastic, warm, and encouraging
+- When greeting, be genuinely friendly: "Hey ${userName}! How's it going?" or "Hi there! Ready to learn?"
+- Use natural transitions: "Okay so...", "Alright, here's the thing...", "You know what?"
+- React naturally to their responses: "Oh cool!", "That's interesting!", "Nice!"
+- Avoid formal or robotic language - NO "I will now teach you..." or "Let us proceed..."
+- Sound like a real teacher talking to a student, not an AI assistant
+
+CRITICAL RULES - ACADEMIC FOCUS ONLY:
 1. ${userAge <= 12 ? 'ONLY teach KSSR (Primary) content' : userAge <= 17 ? 'ONLY teach KSSM (Secondary) content' : 'Can teach both KSSR and KSSM content'}
 2. Use Malaysian educational context and examples (e.g., Malaysian culture, local references, Malaysian currency)
 3. Keep content age-appropriate for ${userAge} years old
@@ -820,6 +886,9 @@ CRITICAL RULES:
 5. Provide concise responses (2-3 sentences maximum)
 6. If asked about topics outside the appropriate syllabus, politely redirect: "That topic is for ${userAge <= 12 ? 'secondary school (KSSM)' : 'primary school (KSSR)'}. Let's focus on your ${syllabusInfo.syllabus} content instead!"
 7. Use real Malaysian school examples (e.g., "In your school...", "Like in Malaysian textbooks...")
+8. STRICTLY ENFORCE: ONLY respond to ACADEMIC questions related to school subjects. If user asks non-academic questions (games, hobbies, personal life unrelated to school), redirect: "Let's focus on your ${syllabusInfo.syllabus} studies! What subject would you like to learn about?"
+9. ONLY accept questions about: Mathematics, Science, English, Bahasa Melayu, History, Geography, and other school subjects
+10. REJECT and redirect: casual conversation, personal questions unrelated to academics, general knowledge quizzes, entertainment topics
 
 FORMATTING RULES - SPEAK NATURALLY:
 ❌ NO markdown (**bold**, *italic*, etc.)
@@ -833,13 +902,22 @@ FORMATTING RULES - SPEAK NATURALLY:
 BAD: "**Practice**: Try this... **Memory Trick**: Remember..."
 GOOD: "Now try this problem. Here's a cool trick to remember it..."
 
+GREETING EXAMPLES (BE NATURAL):
+BAD: "Welcome to Daily Brain Boost. I will now begin Learning Mode."
+GOOD: "Hey ${userName}! So good to see you! Ready to tell me about your day at school?"
+
+BAD: "Now we shall proceed to Teaching Mode."
+GOOD: "Alright, time for the fun part! Let's dive into some learning!"
+
 Language: Respond in ${currentLanguage === 'ms' ? 'Bahasa Melayu' : 'English'}`;
 
 
+        // Prepend context to user message (conversationHistory never contains system messages)
+        const contextMessage = `[CONTEXT: ${contextPrompt}]\n\n${userText}`;
+        
         const updatedHistory = [
-          { role: 'system' as const, content: contextPrompt },
           ...conversationHistory,
-          { role: 'user' as const, content: userText }
+          { role: 'user' as const, content: contextMessage }
         ];
         
         // Try streaming, fallback to regular if it fails
@@ -1198,10 +1276,12 @@ Respond with evaluation and next action.
 `}`;
 
 
+      // Prepend context to user message (conversationHistory never contains system messages)
+      const contextMessage = `[CONTEXT: ${contextPrompt}]\n\nMy answer: ${answerLetter}`;
+      
       const updatedHistory = [
-        { role: 'system' as const, content: contextPrompt },
         ...conversationHistory,
-        { role: 'user' as const, content: `My answer: ${answerLetter}` }
+        { role: 'user' as const, content: contextMessage }
       ];
       
       const response = await aiService.sendMessage(updatedHistory, currentLanguage);
@@ -1253,32 +1333,27 @@ Respond with evaluation and next action.
     }
   };
 
-  // Get option color based on quiz state
-  const getOptionColor = (index: number): [string, string] => {
-    console.log('getOptionColor called for index:', index, 'showQuizResult:', showQuizResult, 'isAnswered:', isAnswered, 'correctAnswer:', correctAnswer, 'selectedAnswer:', selectedAnswer);
-    
+  // Get option color based on quiz state (memoized)
+  const getOptionColor = useCallback((index: number): [string, string] => {
     if (!showQuizResult || !isAnswered) {
       return ['#4A90E2', '#357ABD']; // Default blue before answering
     }
     
     // Show correct answer in green (always)
     if (correctAnswer !== null && index === correctAnswer) {
-      console.log('Showing GREEN for correct answer at index:', index);
       return ['#4CAF50', '#2E7D32']; // Green for correct answer
     }
     
     // Show selected wrong answer in red
     if (index === selectedAnswer && index !== correctAnswer) {
-      console.log('Showing RED for wrong answer at index:', index);
       return ['#F44336', '#D32F2F']; // Red for wrong selected
     }
     
-    console.log('Showing GRAY for index:', index);
     return ['#9E9E9E', '#757575']; // Gray for unselected
-  };
+  }, [showQuizResult, isAnswered, correctAnswer, selectedAnswer]);
 
-  // Get option icon based on quiz state
-  const getOptionIcon = (index: number) => {
+  // Get option icon based on quiz state (memoized)
+  const getOptionIcon = useCallback((index: number) => {
     if (!showQuizResult || !isAnswered) return null;
 
     // Checkmark for correct answer
@@ -1292,7 +1367,7 @@ Respond with evaluation and next action.
     }
 
     return null;
-  };
+  }, [showQuizResult, isAnswered, correctAnswer, selectedAnswer]);
 
   const handleTextSend = async () => {
     if (!textMessage.trim()) return;
@@ -1362,131 +1437,143 @@ WHAT YOU'RE GATHERING FOR TEACHING MODE:
 FOCUS: Learn about their ${syllabusInfo.syllabus} school day. This information guides the next mode.`;
           break;
         case 'teaching':
-          modeContext = `You are in TEACHING MODE (7 minutes). After gathering information in Learning Mode, now TEACH NON-STOP! Make learning easy and fun.
+          modeContext = `You are in TEACHING MODE (7 minutes). This is PURE TEACHING - no quizzes yet! Focus on teaching clearly and thoroughly.
 
-TEACHING STRUCTURE:
-PART 1 - Teach What They Learned Today (3-4 min)
-- Based on what you learned in Learning Mode, teach the subjects they studied TODAY
-- Expand on topics they mentioned
-- Clarify anything they found confusing
-- Make it deeper and clearer than what they got in class
+🔄 **REPEATING CYCLE STRUCTURE:**
 
-PART 2 - Teach Their Weak Subjects (3-4 min)
-- Now focus on their weak subjects: ${weakSubjects.join(', ')}
-- Recap important concepts from their weak areas
-- Reinforce fundamentals they struggle with
+For EACH topic/subject (repeat until time runs out):
 
-TEACHING STYLE - NON-STOP TEACHING:
-✓ Keep teaching continuously - don't stop!
-✓ Move from topic to topic smoothly
-✓ Use FUN FACTS to make concepts memorable
-✓ Use EASY examples (Malaysian context: RM, food, daily life)
-✓ Break down complex topics into SIMPLE steps
-✓ Use analogies students can relate to
-✓ Give MEMORY TRICKS for easy recall
-✓ Check understanding frequently: "Got it?", "Make sense?", "Clear?"
-✓ If unclear, re-explain differently
-✓ Make it EASY and FUN to learn
+**PHASE 1: TEACH 3 SUBTOPICS (2-2.5 minutes)**
+→ Pick a main topic from what they learned in Learning Mode
+→ Break it into 3 related subtopics that cover the WHOLE chapter
+→ Teach each subtopic completely (40-50 sec each)
+→ Use Malaysian examples, fun facts, memory tricks
+→ Example - If topic is "Fractions":
+  • Subtopic 1: Understanding numerator and denominator
+  • Subtopic 2: Adding fractions with same denominator
+  • Subtopic 3: Adding fractions with different denominators
 
-FUN FACTS FOR MEMORIZATION:
-- "Fun fact: [interesting tidbit that helps remember]"
-- "Here's a cool trick: [memory aid]"
-- "Easy way to remember: [mnemonic]"
-- "Think of it this way: [simple analogy]"
-- "In Malaysia, you see this when [local example]"
+TEACHING STRUCTURE FOR EACH SUBTOPIC:
+• Clear explanation (25-30 sec)
+• Malaysian example (10-15 sec)
+• Memory trick or fun fact (10-15 sec)
 
-TEACHING TECHNIQUES:
-1. **Real-World Malaysian Examples**
-   - RM money: "RM20 × 1/2 = RM10"
-   - Food: "Salt in your nasi lemak is NaCl"
-   - Daily: "Shopping trolley is F=ma"
+**PHASE 2: CHECK UNDERSTANDING (30-45 seconds)**
+→ After finishing all 3 subtopics, say: "I just taught you 3 parts of [topic]. Do you understand all 3 subtopics?"
+→ WAIT for student to respond YES or NO
+→ Track their understanding
 
-2. **Simple Analogies**
-   - "Ionic bonds are like giving your phone away"
-   - "Fractions are like cutting kuih into pieces"
-   - "Atoms are like tiny LEGO blocks"
+**PHASE 3A: If Student Says YES/UNDERSTANDS**
+→ Say: "Perfect! You've got it! Let's move to the next topic."
+→ Move to next topic immediately
 
-3. **Fun Memory Tricks**
-   - "Ionic = I own it (transfer), Covalent = We share it"
-   - "PEMDAS: Please Excuse My Dear Aunt Sally"
-   - "ROY G BIV for rainbow colors"
+**PHASE 3B: If Student Says NO/DOESN'T UNDERSTAND**
+→ Ask: "Which subtopic don't you understand? Part 1, 2, or 3?"
+→ WAIT for their response
+→ Re-explain that specific subtopic with different approach:
+  • Use simpler language
+  • Different examples (more relatable)
+  • Step-by-step breakdown
+  • Visual analogy
+→ Ask again: "Clear now?"
+→ If YES → Move to next topic
+→ If NO → Re-explain once more, then move on
 
-4. **Step-by-Step**
-   - Break complex → Step 1 → Step 2 → Step 3 → Done!
-   - Build understanding progressively
-   - Check at each step
+**PHASE 4: MOVE TO NEXT TOPIC**
+→ Pick next main topic from Learning Mode data
+→ INCREASE difficulty level
+→ Go to PHASE 1 with NEW topic
+→ Repeat entire cycle: PHASE 1 → 2 → 3 → 4
 
-5. **Check Understanding**
-   - "Does this make sense?"
-   - "Got it?"
-   - "Want me to explain differently?"
-   - "Can you tell me what you understand?"
+**PROGRESSIVE DIFFICULTY SYSTEM:**
+Cycle 1 (Basic): Foundation concepts, simple examples
+Cycle 2 (Intermediate): Deeper explanations, multiple steps
+Cycle 3 (Advanced): Connections between concepts, reasoning
+Cycle 4+ (Expert): Critical thinking, application, problem-solving
 
-IMPORTANT:
-- Teach CONTINUOUSLY - don't wait, keep going!
-- Make it EASY - use simple language
-- Make it MEMORABLE - use fun facts
-- Make it RELEVANT - use Malaysian examples
-- Keep responses 2-3 sentences, then move to next point
+**TOPICS PRIORITY (What to teach):**
+1. Topics mentioned in Learning Mode (their school day)
+2. Weak subjects: ${weakSubjects.join(', ')}
+3. Related topics that build on previous cycles
+4. Challenge topics for mastery
 
-FOCUS: Teach ${syllabusInfo.syllabus} topics from today + weak subjects. Make learning FUN and EASY!`;
+**MALAYSIAN EXAMPLES:**
+- RM money (fractions, decimals, percentages)
+- Nasi lemak, kuih (chemistry, measurements)
+- Pasar, kedai (economics, calculations)
+- Malaysian nature (science, biology)
+- Local culture (history, language)
+
+**CYCLE TIMING (7 minutes total):**
+Cycle 1: 0-2.5 min (Teach 2.5min)
+Cycle 2: 2.5-5 min (Teach 2.5min)
+Cycle 3: 5-7 min (Teach 2min)
+= 2-3 complete teaching cycles in 7 minutes
+
+**TRACKING FOR HISTORY:**
+At the start of each teaching cycle, announce:
+"TOPIC: [Main Subject/Topic Name]"
+"SUBTOPICS: [Subtopic 1], [Subtopic 2], [Subtopic 3]"
+
+This helps the system track what was taught for the session summary!
+
+CRITICAL RULES:
+✅ Always teach 3 subtopics per topic
+✅ Always check understanding after teaching
+✅ Always increase difficulty each cycle
+✅ Track what topics and subtopics are taught (for history)
+✅ NO QUIZ QUESTIONS in this mode - that's for Quiz Mode!
+
+FOCUS: Teach complete chapters clearly → Check understanding → Move to next topic with progressive difficulty!`;
           break;
           case 'quiz':
-            modeContext = `You are in QUIZ MODE (5 minutes). Generate EDUCATIONAL MULTIPLE CHOICE questions from ${syllabusInfo.syllabus} curriculum ONLY.
+            modeContext = `You are in QUIZ MODE (5 minutes). This is a SEPARATE quiz mode that tests what was taught in Teaching Mode.
 
-CRITICAL - EDUCATIONAL QUESTIONS ONLY:
-- NO chitchat or general knowledge questions
-- ONLY ask questions from Malaysian ${syllabusInfo.syllabus} curriculum
-- Questions must be about ACADEMIC subjects: Mathematics, Science, English, Bahasa Melayu, History, etc.
-- Based on what you taught in Teaching Mode
-- Match student's age (${userAge} years old) and curriculum level
-- NO personal questions, NO "how are you", NO casual conversation
+CRITICAL - QUIZ MODE ONLY:
+- This mode is ONLY for asking quiz questions - NO teaching, NO explanations (except feedback)
+- Generate 5 questions per topic that was taught in Teaching Mode
+- Questions should test understanding of the 3 subtopics taught for each topic
+- After each question, provide brief feedback, then move to next question immediately
 
-REQUIRED FORMAT - FOLLOW EXACTLY:
+QUIZ STRUCTURE:
+For EACH topic that was taught in Teaching Mode:
+1. Ask 5 questions about that topic (one at a time)
+2. Each question tests the 3 subtopics that were taught
+3. Provide immediate feedback after each answer
+4. After 5 questions for a topic, move to next topic
+5. Repeat until time runs out (5 minutes total)
 
-QUESTION: [Educational question from ${syllabusInfo.syllabus} curriculum]
+QUESTION FORMAT - EXACTLY:
+QUESTION 1: [Question about the topic taught]
 A) [Option 1]
 B) [Option 2]
 C) [Option 3]
 D) [Option 4]
 
-EXAMPLES OF CORRECT EDUCATIONAL QUESTIONS:
+PROGRESSIVE DIFFICULTY (MUST FOLLOW):
+→ Question 1 (EASY): Basic recall from Subtopic 1
+→ Question 2 (EASY): Simple application from Subtopic 2  
+→ Question 3 (MEDIUM): Application from Subtopic 3
+→ Question 4 (MEDIUM): Combining 2 subtopics
+→ Question 5 (HARD): Complex problem using all 3 subtopics
 
-${userAge <= 12 ? `KSSR Primary Level Examples:
-QUESTION: What is 5 + 3?
-A) 6
-B) 7
-C) 8
-D) 9
+CRITICAL RULES:
+✅ Each question MUST be DIFFERENT - no repeating!
+✅ Use the question number (QUESTION 1, QUESTION 2, etc.)
+✅ Test different concepts from the 3 subtopics taught
+✅ Make answers vary (not always A!)
+✅ Progressive difficulty: Question 1 = easiest, Question 5 = hardest
+✅ After student answers, provide brief feedback (1 sentence), then ask next question immediately
 
-QUESTION: How many legs does a cat have?
-A) 2
-B) 4
-C) 6
-D) 8
+FEEDBACK FORMAT:
+- If CORRECT: "Correct! ✓ [1 sentence why]"
+- If WRONG: "The answer is [LETTER]. [1 sentence explanation]"
+- Then immediately: "Next question: QUESTION 2: ..."
 
-QUESTION: What do plants need to grow?
-A) Only water
-B) Only sunlight
-C) Water and sunlight
-D) Nothing` : `KSSM Secondary Level Examples:
-QUESTION: What is the chemical formula for water?
-A) H2O
-B) CO2
-C) NaCl
-D) O2
-
-QUESTION: What is the value of x in: 2x + 4 = 10?
-A) 2
-B) 3
-C) 4
-D) 5
-
-QUESTION: What type of bond is NaCl?
-A) Ionic
-B) Covalent
-C) Metallic
-D) Hydrogen`}
+TOPICS TO QUIZ ON:
+1. Topics that were taught in Teaching Mode (check conversation history for "TOPIC:" announcements)
+2. Weak subjects: ${weakSubjects.join(', ')}
+3. ${syllabusInfo.syllabus} curriculum content appropriate for age ${userAge}
 
 STRICT SUBJECT AREAS (${syllabusInfo.syllabus}):
 - Mathematics/Matematik
@@ -1496,32 +1583,43 @@ STRICT SUBJECT AREAS (${syllabusInfo.syllabus}):
 - History/Sejarah
 - ${userAge > 12 ? 'Chemistry, Physics, Biology, Additional Mathematics' : 'Basic calculations, simple science, language basics'}
 
-WHAT TO QUIZ ON:
-- Educational topics from Teaching Mode
-- ${weakSubjects.join(', ')} concepts
-- ${syllabusInfo.syllabus} curriculum content
-- Academic concepts, formulas, definitions
-
 BANNED TOPICS (DO NOT ASK):
 ❌ Personal questions ("How are you?", "What's your name?")
 ❌ General knowledge ("Who is the president?", "What color is the sky?")
 ❌ Chitchat or conversation
 ❌ Non-academic topics
 
-QUIZ FLOW:
-1. Ask EDUCATIONAL question in the format above
-2. Wait for A, B, C, or D selection
-3. Respond with: "Correct! ✓ [explanation]" or "Not quite. Answer is [letter]. [explanation]"
-4. Immediately ask NEXT EDUCATIONAL question
+TIMING (5 minutes total):
+- Topic 1: ~1.5 minutes (5 questions)
+- Topic 2: ~1.5 minutes (5 questions)
+- Topic 3: ~2 minutes (5 questions)
+= 3 topics × 5 questions = 15 questions total
 
-FEEDBACK FORMAT:
-Keep it SHORT (1 sentence), then ask next question!
+CONVERSATION FLOW EXAMPLE:
 
-CRITICAL: Every question MUST be from ${syllabusInfo.syllabus} curriculum and educational!`;
+"Time for quiz! Let's test what you learned about Fractions. QUESTION 1: What is 1/2 + 1/4? A) 1/6 B) 2/4 C) 3/4 D) 1/8"
+Student: "C"
+"Correct! ✓ You remembered adding fractions with different denominators. Next question: QUESTION 2: ..."
+[Continue with 4 more questions for Fractions]
+
+"Great! Now let's test Decimals. QUESTION 1: ..."
+[5 questions for Decimals]
+
+"Excellent! Last topic - Percentages. QUESTION 1: ..."
+[5 questions for Percentages]
+
+CRITICAL RULES:
+✅ ONLY ask quiz questions - NO teaching in this mode
+✅ Test what was taught in Teaching Mode
+✅ 5 questions per topic
+✅ Brief feedback, then next question immediately
+✅ Track topics quizzed for session history
+
+FOCUS: Test understanding of topics taught in Teaching Mode with 5 questions each!`;
             break;
       }
       
-      const contextPrompt = `You are a Malaysian education AI tutor helping ${userName} with their Daily Brain Boost session.
+      const contextPrompt = `You are a friendly, warm Malaysian education tutor helping ${userName} with their Daily Brain Boost session. Talk like a real person - be natural, conversational, and human!
 
 STUDENT PROFILE:
 - Age: ${userAge} years old
@@ -1536,7 +1634,17 @@ ${syllabusGuidance}
 CURRENT MODE: ${modeContext}
 FOCUS: Give priority to ${getSubjectDisplayName().name} content and examples
 
-CRITICAL RULES:
+CRITICAL - BE HUMAN AND NATURAL:
+- Talk like you're chatting with a friend, not a robot
+- Use casual, friendly language (e.g., "Hey!", "Okay", "So...", "Right?", "Got it?")
+- Show personality - be enthusiastic, warm, and encouraging
+- When greeting, be genuinely friendly: "Hey ${userName}! How's it going?" or "Hi there! Ready to learn?"
+- Use natural transitions: "Okay so...", "Alright, here's the thing...", "You know what?"
+- React naturally to their responses: "Oh cool!", "That's interesting!", "Nice!"
+- Avoid formal or robotic language - NO "I will now teach you..." or "Let us proceed..."
+- Sound like a real teacher talking to a student, not an AI assistant
+
+CRITICAL RULES - ACADEMIC FOCUS ONLY:
 1. ${userAge <= 12 ? 'ONLY teach KSSR (Primary) content' : userAge <= 17 ? 'ONLY teach KSSM (Secondary) content' : 'Can teach both KSSR and KSSM content'}
 2. Use Malaysian educational context and examples (e.g., Malaysian culture, local references, Malaysian currency)
 3. Keep content age-appropriate for ${userAge} years old
@@ -1544,6 +1652,9 @@ CRITICAL RULES:
 5. Provide concise responses (2-3 sentences maximum)
 6. If asked about topics outside the appropriate syllabus, politely redirect: "That topic is for ${userAge <= 12 ? 'secondary school (KSSM)' : 'primary school (KSSR)'}. Let's focus on your ${syllabusInfo.syllabus} content instead!"
 7. Use real Malaysian school examples (e.g., "In your school...", "Like in Malaysian textbooks...")
+8. STRICTLY ENFORCE: ONLY respond to ACADEMIC questions related to school subjects. If user asks non-academic questions (games, hobbies, personal life unrelated to school), redirect: "Let's focus on your ${syllabusInfo.syllabus} studies! What subject would you like to learn about?"
+9. ONLY accept questions about: Mathematics, Science, English, Bahasa Melayu, History, Geography, and other school subjects
+10. REJECT and redirect: casual conversation, personal questions unrelated to academics, general knowledge quizzes, entertainment topics
 
 FORMATTING RULES - SPEAK NATURALLY:
 ❌ NO markdown (**bold**, *italic*, etc.)
@@ -1557,12 +1668,21 @@ FORMATTING RULES - SPEAK NATURALLY:
 BAD: "**Practice**: Try this... **Memory Trick**: Remember..."
 GOOD: "Now try this problem. Here's a cool trick to remember it..."
 
+GREETING EXAMPLES (BE NATURAL):
+BAD: "Welcome to Daily Brain Boost. I will now begin Learning Mode."
+GOOD: "Hey ${userName}! So good to see you! Ready to tell me about your day at school?"
+
+BAD: "Now we shall proceed to Teaching Mode."
+GOOD: "Alright, time for the fun part! Let's dive into some learning!"
+
 Language: Respond in ${currentLanguage === 'ms' ? 'Bahasa Melayu' : 'English'}`;
 
+      // Prepend context to user message (conversationHistory never contains system messages)
+      const contextMessage = `[CONTEXT: ${contextPrompt}]\n\n${userText}`;
+      
       const updatedHistory = [
-        { role: 'system' as const, content: contextPrompt },
         ...conversationHistory,
-        { role: 'user' as const, content: userText }
+        { role: 'user' as const, content: contextMessage }
       ];
       
       // Try streaming, fallback to regular if it fails
@@ -1653,14 +1773,17 @@ Language: Respond in ${currentLanguage === 'ms' ? 'Bahasa Melayu' : 'English'}`;
     }
   };
 
-  const dynamicStyles = {
+  // Note: Responsive styles are handled via StyleSheet using Dimensions at module level
+
+  // Memoize dynamic styles to prevent recreation on every render
+  const dynamicStyles = useMemo(() => ({
     container: {
       backgroundColor: isDark ? '#000000' : '#FFFFFF',
     },
     text: {
       color: isDark ? '#FFFFFF' : '#000000',
     },
-  };
+  }), [isDark]);
 
   return (
     <Animated.View style={[styles.container, dynamicStyles.container, { opacity: pageFadeAnim }]}>
@@ -1793,6 +1916,18 @@ Language: Respond in ${currentLanguage === 'ms' ? 'Bahasa Melayu' : 'English'}`;
               <Text style={styles.modeTitle}>{getModeInfo(currentMode).title}</Text>
               <Text style={styles.modeTimer}>{formatTime(modeTimeRemaining)}</Text>
             </View>
+
+            {/* Skip Button */}
+            <TouchableOpacity
+              style={styles.skipButton}
+              onPress={skipCurrentMode}
+              activeOpacity={0.7}
+            >
+              <FastForward size={18} color="#FFFFFF" />
+              <Text style={styles.skipButtonText}>
+                {currentLanguage === 'ms' ? 'Langkau' : 'Skip'}
+              </Text>
+            </TouchableOpacity>
           </View>
         )}
 
@@ -2115,20 +2250,26 @@ Language: Respond in ${currentLanguage === 'ms' ? 'Bahasa Melayu' : 'English'}`;
   );
 }
 
+// Get screen dimensions for responsive styles
+const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
+const isSmallDevice = SCREEN_WIDTH < 375;
+const isTablet = SCREEN_WIDTH >= 768;
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
   gradient: {
     flex: 1,
-    paddingTop: 50,
+    paddingTop: Platform.OS === 'ios' ? 50 : 40,
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingBottom: 20,
+    paddingHorizontal: isSmallDevice ? 15 : 20,
+    paddingBottom: isSmallDevice ? 15 : 20,
+    minHeight: 60,
   },
   backButton: {
     width: 40,
@@ -2143,15 +2284,17 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   headerTitle: {
-    fontSize: 20,
+    fontSize: isSmallDevice ? 18 : isTablet ? 24 : 20,
     fontFamily: 'SpaceGrotesk-Bold',
     color: '#FFFFFF',
+    textAlign: 'center',
   },
   headerSubject: {
-    fontSize: 14,
+    fontSize: isSmallDevice ? 12 : isTablet ? 16 : 14,
     fontFamily: 'Inter-Medium',
     color: '#A0AEC0',
     marginTop: 2,
+    textAlign: 'center',
   },
   headerRight: {
     flexDirection: 'row',
@@ -2225,23 +2368,23 @@ const styles = StyleSheet.create({
   },
   chatContainer: {
     flex: 1,
-    paddingHorizontal: 20,
+    paddingHorizontal: isSmallDevice ? 15 : 20,
   },
   aiAvatarContainer: {
     alignItems: 'center',
-    marginVertical: 20,
+    marginVertical: isSmallDevice ? 15 : 20,
     position: 'relative',
   },
   splineContainer: {
-    width: 150,
-    height: 150,
+    width: isSmallDevice ? 120 : isTablet ? 180 : 150,
+    height: isSmallDevice ? 120 : isTablet ? 180 : 150,
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: 'transparent',
   },
   splineWebView: {
-    width: 150,
-    height: 150,
+    width: isSmallDevice ? 120 : isTablet ? 180 : 150,
+    height: isSmallDevice ? 120 : isTablet ? 180 : 150,
     backgroundColor: 'transparent',
   },
   aiAvatarCircle: {
@@ -2278,10 +2421,10 @@ const styles = StyleSheet.create({
     paddingBottom: 20,
   },
   messageContainer: {
-    marginBottom: 15,
-    padding: 15,
+    marginBottom: isSmallDevice ? 12 : 15,
+    padding: isSmallDevice ? 12 : 15,
     borderRadius: 15,
-    maxWidth: '85%',
+    maxWidth: isSmallDevice ? '90%' : isTablet ? '75%' : '85%',
   },
   userMessage: {
     alignSelf: 'flex-end',
@@ -2292,10 +2435,10 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255, 255, 255, 0.1)',
   },
   messageText: {
-    fontSize: 16,
+    fontSize: isSmallDevice ? 14 : isTablet ? 18 : 16,
     fontFamily: 'Inter-Regular',
     color: '#FFFFFF',
-    lineHeight: 22,
+    lineHeight: isSmallDevice ? 20 : isTablet ? 26 : 22,
   },
   // Sticky Bottom Controls - Jom Tanya Style
   stickyBottomControls: {
@@ -2313,9 +2456,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   micButtonOverlay: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
+    width: isSmallDevice ? 80 : isTablet ? 120 : 100,
+    height: isSmallDevice ? 80 : isTablet ? 120 : 100,
+    borderRadius: isSmallDevice ? 40 : isTablet ? 60 : 50,
     backgroundColor: '#FF69B4',
     justifyContent: 'center',
     alignItems: 'center',
@@ -2334,16 +2477,16 @@ const styles = StyleSheet.create({
     shadowColor: '#FFFFFF',
   },
   micInner: {
-    width: 70,
-    height: 70,
-    borderRadius: 35,
+    width: isSmallDevice ? 56 : isTablet ? 84 : 70,
+    height: isSmallDevice ? 56 : isTablet ? 84 : 70,
+    borderRadius: isSmallDevice ? 28 : isTablet ? 42 : 35,
     backgroundColor: 'transparent',
     justifyContent: 'center',
     alignItems: 'center',
   },
   micIcon: {
-    width: 100,
-    height: 100,
+    width: isSmallDevice ? 80 : isTablet ? 120 : 100,
+    height: isSmallDevice ? 80 : isTablet ? 120 : 100,
   },
   sideIconButton: {
     width: 48,
@@ -2376,13 +2519,13 @@ const styles = StyleSheet.create({
   textInputContainer: {
     flexDirection: 'row',
     alignItems: 'flex-end',
-    paddingHorizontal: 20,
-    paddingVertical: 15,
-    gap: 12,
+    paddingHorizontal: isSmallDevice ? 15 : 20,
+    paddingVertical: isSmallDevice ? 12 : 15,
+    gap: isSmallDevice ? 8 : 12,
     backgroundColor: 'rgba(255, 255, 255, 0.1)',
     borderRadius: 25,
-    marginHorizontal: 20,
-    marginBottom: 15,
+    marginHorizontal: isSmallDevice ? 15 : 20,
+    marginBottom: isSmallDevice ? 10 : 15,
   },
   inputWrapper: {
     flex: 1,
@@ -2457,16 +2600,16 @@ const styles = StyleSheet.create({
   quizQuestionCard: {
     backgroundColor: 'rgba(255, 255, 255, 0.1)',
     borderRadius: 16,
-    padding: 20,
-    marginBottom: 20,
+    padding: isSmallDevice ? 15 : isTablet ? 25 : 20,
+    marginBottom: isSmallDevice ? 15 : 20,
     borderWidth: 2,
     borderColor: '#FFD700',
   },
   quizQuestionText: {
-    fontSize: 18,
+    fontSize: isSmallDevice ? 16 : isTablet ? 20 : 18,
     fontFamily: 'SpaceGrotesk-Bold',
     color: '#FFFFFF',
-    lineHeight: 26,
+    lineHeight: isSmallDevice ? 22 : isTablet ? 28 : 26,
     textAlign: 'center',
   },
   quizOptionsContainer: {
@@ -2504,7 +2647,7 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
   },
   quizOptionText: {
-    fontSize: 16,
+    fontSize: isSmallDevice ? 14 : isTablet ? 18 : 16,
     fontFamily: 'Inter-Regular',
     color: '#FFFFFF',
     flex: 1,
@@ -2573,10 +2716,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   timeCheckModal: {
-    width: '85%',
+    width: isSmallDevice ? '90%' : isTablet ? '70%' : '85%',
+    maxWidth: 500,
     backgroundColor: '#1a1a1a',
     borderRadius: 20,
-    padding: 30,
+    padding: isSmallDevice ? 20 : isTablet ? 35 : 30,
     alignItems: 'center',
     borderWidth: 2,
     borderColor: '#FFD700',
@@ -2650,10 +2794,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 15,
+    paddingHorizontal: isSmallDevice ? 15 : 20,
+    paddingVertical: isSmallDevice ? 12 : 15,
     marginBottom: 10,
-    gap: 15,
+    gap: isSmallDevice ? 10 : 15,
   },
   timerSection: {
     flex: 1,
@@ -2687,6 +2831,23 @@ const styles = StyleSheet.create({
   },
   modeTimer: {
     fontSize: 18,
+    fontFamily: 'Inter-Bold',
+    color: '#FFFFFF',
+  },
+  skipButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    borderRadius: 12,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    gap: 6,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.2)',
+  },
+  skipButtonText: {
+    fontSize: 14,
     fontFamily: 'Inter-Bold',
     color: '#FFFFFF',
   },

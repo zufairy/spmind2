@@ -78,19 +78,75 @@ export default function RecordingResultScreen() {
     }
   }, [sessionId]);
 
-  const loadSessionData = async () => {
+  const loadSessionData = async (retryCount = 0) => {
     try {
       setLoading(true);
       
-      // Load session details
-      const sessionData = await recordingServiceSupabase.getSessionById(sessionId as string);
-      if (sessionData) {
-        setSession(sessionData);
-        setEditingTitle(sessionData.title || '');
+      // Load session details with aggressive retry logic
+      let sessionData = await recordingServiceSupabase.getSessionById(sessionId as string);
+      let attempts = 0;
+      const maxAttempts = 10; // More attempts for reliability
+      
+      // Keep retrying until we find the session or exhaust attempts
+      while (!sessionData && attempts < maxAttempts) {
+        attempts++;
+        console.log(`Loading session attempt ${attempts}/${maxAttempts}...`);
+        
+        // Exponential backoff: 1s, 2s, 3s, 4s, 5s...
+        await new Promise(resolve => setTimeout(resolve, 1000 * attempts));
+        sessionData = await recordingServiceSupabase.getSessionById(sessionId as string);
+        
+        if (sessionData) {
+          console.log('✅ Session found on attempt', attempts);
+          break;
+        }
       }
+      
+      if (!sessionData) {
+        // Last resort: try querying directly from Supabase
+        console.log('Attempting direct Supabase query as fallback...');
+        try {
+          const { data: directData, error: directError } = await supabase
+            .from('recording_sessions')
+            .select('*')
+            .eq('id', sessionId)
+            .single();
+          
+          if (!directError && directData) {
+            console.log('✅ Found session via direct query');
+            sessionData = directData as RecordingSession;
+          }
+        } catch (directQueryError) {
+          console.error('Direct query also failed:', directQueryError);
+        }
+      }
+      
+      if (!sessionData) {
+        throw new Error(`Session not found after ${maxAttempts} attempts. The session may still be processing.`);
+      }
+      
+      console.log('✅ Session loaded:', sessionData.id);
+      setSession(sessionData);
+      setEditingTitle(sessionData.title || '');
 
-      // Load sticky notes for this session
-      const notes = await recordingServiceSupabase.getSessionStickyNotes(sessionId as string);
+      // Load sticky notes for this session with retry
+      let notes = await recordingServiceSupabase.getSessionStickyNotes(sessionId as string);
+      
+      // Retry loading notes multiple times if not found
+      let noteAttempts = 0;
+      const maxNoteAttempts = 5;
+      while ((!notes || notes.length === 0) && noteAttempts < maxNoteAttempts) {
+        noteAttempts++;
+        console.log(`Loading sticky notes attempt ${noteAttempts}/${maxNoteAttempts}...`);
+        await new Promise(resolve => setTimeout(resolve, 2000 * noteAttempts));
+        notes = await recordingServiceSupabase.getSessionStickyNotes(sessionId as string);
+        
+        if (notes && notes.length > 0) {
+          console.log('✅ Sticky notes found on attempt', noteAttempts);
+          break;
+        }
+      }
+      
       console.log('🔍 Loaded sticky notes from database:', notes);
       console.log('🔍 Notes length:', notes?.length || 0);
       
@@ -113,12 +169,39 @@ export default function RecordingResultScreen() {
         console.log('🔍 Converted session notes:', sessionNotes);
         setStickyNotes(sessionNotes);
       } else {
-        console.log('🔍 No sticky notes found in database');
+        console.log('🔍 No sticky notes found in database (they may still be generating)');
         setStickyNotes([]);
+        // Don't treat this as an error - notes might still be processing
       }
     } catch (error) {
       console.error('Error loading session data:', error);
-      Alert.alert('Error', 'Failed to load recording session data');
+      const errorMessage = error instanceof Error ? error.message : 'Failed to load recording session data';
+      
+      // Show error but keep loading state active for auto-retry
+      Alert.alert(
+        'Loading Session', 
+        errorMessage + '\n\nRetrying automatically...',
+        [
+          {
+            text: 'Retry Now',
+            onPress: () => loadSessionData(0)
+          },
+          {
+            text: 'Wait',
+            style: 'default',
+            onPress: () => {
+              // Auto-retry after 3 seconds
+              setTimeout(() => loadSessionData(0), 3000);
+            }
+          }
+        ]
+      );
+      
+      // Auto-retry after 5 seconds
+      setTimeout(() => {
+        console.log('Auto-retrying session load...');
+        loadSessionData(0);
+      }, 5000);
     } finally {
       setLoading(false);
     }
@@ -649,13 +732,43 @@ Format your response as JSON array (empty [] if no educational content found):
     );
   }
 
-  if (!session) {
+  if (!session && !loading) {
     return (
       <View style={styles.errorContainer}>
         <Text style={styles.errorText}>Session not found</Text>
-        <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
-          <Text style={styles.backButtonText}>Go Back</Text>
-        </TouchableOpacity>
+        <Text style={styles.errorSubtext}>
+          The session may still be processing. Please wait or try again.
+        </Text>
+        <View style={styles.errorButtons}>
+          <TouchableOpacity 
+            style={styles.retryButton} 
+            onPress={() => {
+              setLoading(true);
+              loadSessionData(0);
+            }}
+          >
+            <Text style={styles.retryButtonText}>Retry Loading</Text>
+          </TouchableOpacity>
+          <TouchableOpacity 
+            style={styles.backButton} 
+            onPress={() => router.back()}
+          >
+            <Text style={styles.backButtonText}>Go Back</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    );
+  }
+  
+  // Show loading if we don't have session yet
+  if (!session) {
+    return (
+      <View style={styles.loadingContainer}>
+        <LoadingSpinner size={48} color="#667eea" />
+        <Text style={styles.loadingText}>Loading session...</Text>
+        <Text style={styles.loadingSubtext}>
+          This may take a few moments while we process your recording.
+        </Text>
       </View>
     );
   }
@@ -1036,12 +1149,48 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#1a1a1a',
+    backgroundColor: '#FFFFFF',
+    padding: 20,
   },
   errorText: {
-    color: '#fff',
-    fontSize: 18,
-    marginBottom: 20,
+    fontSize: 20,
+    fontWeight: '600',
+    color: '#333',
+    marginBottom: 12,
+    textAlign: 'center',
+  },
+  errorSubtext: {
+    fontSize: 14,
+    color: '#666',
+    marginBottom: 30,
+    textAlign: 'center',
+    paddingHorizontal: 20,
+  },
+  errorButtons: {
+    flexDirection: 'row',
+    gap: 12,
+    width: '100%',
+    maxWidth: 300,
+  },
+  retryButton: {
+    flex: 1,
+    backgroundColor: '#667eea',
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  retryButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  loadingSubtext: {
+    fontSize: 14,
+    color: '#666',
+    marginTop: 12,
+    textAlign: 'center',
+    paddingHorizontal: 40,
   },
   header: {
     flexDirection: 'row',

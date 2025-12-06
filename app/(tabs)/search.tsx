@@ -46,6 +46,7 @@ import { Audio } from 'expo-av';
 import { aiService } from '../../services/aiService';
 import { languageService } from '../../services/languageService';
 import { useRouter } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Subject } from '../../components/SubjectSlider';
 import CameraSubjectOverlay from '../../components/CameraSubjectOverlay';
 import { useTheme } from '../../contexts/ThemeContext';
@@ -90,6 +91,7 @@ const FormattedText = ({ text, style }: { text: string; style?: any }) => {
 export default function SolverScreen() {
   const { isDark } = useTheme();
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const [permission, requestPermission] = useCameraPermissions();
   const camera = useRef<CameraView>(null);
   const pageFadeAnim = useRef(new RNAnimated.Value(0)).current;
@@ -961,7 +963,7 @@ Respond as Cikgu Genius - warm, helpful, and naturally Malaysian!`;
 
   const tabSwitchStyle = useAnimatedStyle(() => {
     return {
-      transform: [{ translateX: interpolate(tabSwitchValue.value, [0, 1], [0, 40], Extrapolation.CLAMP) }],
+      transform: [{ translateX: interpolate(tabSwitchValue.value, [0, 1], [0, 38], Extrapolation.CLAMP) }],
     };
   });
 
@@ -996,14 +998,8 @@ Respond as Cikgu Genius - warm, helpful, and naturally Malaysian!`;
 
   return (
     <RNAnimated.View style={[styles.container, dynamicStyles.container, { opacity: pageFadeAnim }]}>
-      {/* Header with Background Image */}
-      <View style={styles.header}>
-        <Image 
-          source={require('../../assets/images/bg.jpg')}
-          style={styles.headerBackground}
-          resizeMode="cover"
-        />
-        <View style={styles.headerBlurOverlay} />
+      {/* Header with Black Background */}
+      <View style={[styles.header, { paddingTop: insets.top }]}>
         <View style={styles.headerContent}>
           {/* Switch moved to profile picture place */}
           <View style={styles.headerLeft}>
@@ -1012,25 +1008,23 @@ Respond as Cikgu Genius - warm, helpful, and naturally Malaysian!`;
               <TouchableOpacity
                 style={[styles.premiumTabButton, activeTab === 'image' && styles.activePremiumTab]}
                 onPress={() => handleTabSwitch('image')}
+                activeOpacity={0.7}
               >
-                <CameraIcon size={20} color={activeTab === 'image' ? '#FFFFFF' : '#999999'} />
+                <CameraIcon size={16} color={activeTab === 'image' ? '#FFFFFF' : '#FFB366'} />
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.premiumTabButton, activeTab === 'chat' && styles.activePremiumTab]}
                 onPress={() => handleTabSwitch('chat')}
+                activeOpacity={0.7}
               >
-                <MessageSquare size={20} color={activeTab === 'chat' ? '#FFFFFF' : '#999999'} />
+                <MessageSquare size={16} color={activeTab === 'chat' ? '#FFFFFF' : '#FFB366'} />
               </TouchableOpacity>
             </View>
           </View>
           
           {/* Logo in center */}
           <View style={styles.headerCenter}>
-            <Image 
-              source={require('../../assets/images/logo.png')} 
-              style={styles.headerLogo}
-              resizeMode="contain"
-            />
+            <Text style={styles.headerLogo}>Ask Me!</Text>
           </View>
           
           {/* History button moved to top right */}
@@ -1038,9 +1032,9 @@ Respond as Cikgu Genius - warm, helpful, and naturally Malaysian!`;
             <TouchableOpacity
               style={styles.historyButton}
               onPress={() => setShowHistory(!showHistory)}
-              activeOpacity={0.8}
+              activeOpacity={0.7}
             >
-              <History size={20} color="#FFFFFF" />
+              <History size={16} color="#FFFFFF" />
             </TouchableOpacity>
           </View>
         </View>
@@ -1313,45 +1307,25 @@ const styles = StyleSheet.create({
   header: {
     position: 'relative',
     overflow: 'hidden',
-    height: 100,
     zIndex: 100,
-  },
-  headerBackground: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    width: '100%',
-    height: '100%',
-    zIndex: 1,
-  },
-  headerBlurOverlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.1)',
-    zIndex: 2,
-    pointerEvents: 'none',
-    // Add slight blur effect
-    backdropFilter: 'blur(2px)',
+    backgroundColor: '#000000',
   },
   headerContent: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 20,
-    paddingTop: 50,
-    paddingBottom: 20,
+    paddingTop: 12,
+    paddingBottom: 12,
     position: 'relative',
     zIndex: 200,
     pointerEvents: 'box-none',
+    minHeight: 60,
   },
   headerLeft: {
-    flex: 1,
+    width: 80,
     alignItems: 'flex-start',
+    justifyContent: 'center',
     zIndex: 201,
     pointerEvents: 'box-none',
   },
@@ -1361,14 +1335,19 @@ const styles = StyleSheet.create({
     pointerEvents: 'none',
     alignItems: 'center',
     justifyContent: 'center',
+    paddingHorizontal: 10,
+    paddingLeft: 40,
   },
   headerLogo: {
-    width: 120,
-    height: 40,
+    fontSize: 24,
+    fontFamily: 'Fredoka-SemiBold',
+    color: '#FFFFFF',
+    fontWeight: '600',
   },
   headerRight: {
-    flex: 1,
+    width: 36,
     alignItems: 'flex-end',
+    justifyContent: 'center',
     zIndex: 201,
     pointerEvents: 'box-none',
   },
@@ -1433,88 +1412,67 @@ const styles = StyleSheet.create({
   },
   premiumTabSwitch: {
     flexDirection: 'row',
-    backgroundColor: '#1a1a1a',
-    borderRadius: 4,
+    backgroundColor: '#FF9500',
+    borderRadius: 20,
     padding: 2,
     position: 'relative',
     width: 80,
-    height: 36,
-    borderWidth: 2,
-    borderColor: '#333333',
-    shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.6,
-    shadowRadius: 8,
-    elevation: 12,
+    height: 32,
+    shadowColor: '#CC7700',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.65,
+    shadowRadius: 14,
+    elevation: 14,
     zIndex: 300,
     pointerEvents: 'auto',
-    // Metal gradient effect
-    borderTopColor: '#404040',
-    borderLeftColor: '#404040',
-    borderRightColor: '#1a1a1a',
-    borderBottomColor: '#0a0a0a',
+    borderWidth: 0,
+    borderBottomWidth: 3,
+    borderBottomColor: '#E6850E',
   },
   tabSwitchSlider: {
     position: 'absolute',
     width: 38,
-    height: 32,
-    backgroundColor: '#2a2a2a',
-    borderRadius: 2,
+    top: 2,
+    bottom: 2,
+    backgroundColor: '#FFB84D',
+    borderRadius: 18,
     zIndex: -1,
-    shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.8,
-    shadowRadius: 4,
+    shadowColor: '#CC7700',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.5,
+    shadowRadius: 8,
     elevation: 8,
-    // Metal slider effect
-    borderWidth: 1,
-    borderColor: '#404040',
-    borderTopColor: '#505050',
-    borderLeftColor: '#505050',
-    borderRightColor: '#1a1a1a',
-    borderBottomColor: '#0a0a0a',
+    borderBottomWidth: 2,
+    borderBottomColor: '#E6850E',
   },
   premiumTabButton: {
     width: 38,
-    height: 32,
-    borderRadius: 2,
+    height: 28,
+    borderRadius: 18,
     justifyContent: 'center',
     alignItems: 'center',
-    borderWidth: 1,
-    borderColor: 'transparent',
     zIndex: 301,
     pointerEvents: 'auto',
   },
   activePremiumTab: {
-    backgroundColor: 'rgba(0, 0, 0, 0.1)',
-    borderWidth: 1,
-    borderColor: '#404040',
-    borderTopColor: '#505050',
-    borderLeftColor: '#505050',
-    borderRightColor: '#1a1a1a',
-    borderBottomColor: '#0a0a0a',
+    backgroundColor: 'transparent',
   },
   historyButton: {
-    width: 40,
-    height: 36,
-    borderRadius: 4,
-    backgroundColor: '#1a1a1a',
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    backgroundColor: '#FF9500',
     justifyContent: 'center',
     alignItems: 'center',
-    borderWidth: 2,
-    borderColor: '#333333',
-    shadowColor: '#000000',
+    shadowColor: '#CC7700',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.6,
     shadowRadius: 8,
-    elevation: 12,
+    elevation: 8,
     zIndex: 300,
     pointerEvents: 'auto',
-    // Metal gradient effect
-    borderTopColor: '#404040',
-    borderLeftColor: '#404040',
-    borderRightColor: '#1a1a1a',
-    borderBottomColor: '#0a0a0a',
+    borderBottomWidth: 2,
+    borderBottomColor: '#E6850E',
   },
   subjectTabsContainer: {
     position: 'absolute',
