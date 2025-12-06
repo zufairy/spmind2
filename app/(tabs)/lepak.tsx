@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useReducer, useMemo } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Dimensions, Image, ImageBackground, Animated, TextInput, PixelRatio, KeyboardAvoidingView, Platform, Keyboard, InputAccessoryView } from 'react-native';
  
 import { LinearGradient } from 'expo-linear-gradient';
-import { Globe, Settings, MessageCircle, Users, Home, Coffee, Gamepad2, Heart, Star, Smile, Camera, Palette, Search, FileText, User } from 'lucide-react-native';
+import { Globe, Settings, MessageCircle, Users, Home, Coffee, Gamepad2, Heart, Star, Smile, Camera, Palette, Search, FileText, User, X } from 'lucide-react-native';
 import { router } from 'expo-router';
 import * as Animatable from 'react-native-animatable';
 import { useTheme } from '../../contexts/ThemeContext';
@@ -2069,51 +2069,47 @@ export default function LepakScreen() {
           style={[styles.gradient, dynamicStyles.gradient]}
         >
           {/* Custom Navigation Bar */}
-          <View style={styles.customNavigationBar}>
+          {/* <View style={styles.customNavigationBar}>
             <TouchableOpacity 
               style={styles.navButton}
               onPress={() => router.push('/(tabs)/search')}
             >
-              <Search size={24} color="#6B7280" strokeWidth={2} />
+              <Search size={32} color="#6B7280" strokeWidth={2} style={{ opacity: 0.6 }} />
             </TouchableOpacity>
             <TouchableOpacity 
               style={styles.navButton}
               onPress={() => router.push('/(tabs)/notes')}
             >
-              <FileText size={24} color="#6B7280" strokeWidth={2} />
+              <FileText size={32} color="#6B7280" strokeWidth={2} style={{ opacity: 0.6 }} />
             </TouchableOpacity>
             <TouchableOpacity 
               style={styles.navButton}
               onPress={() => router.push('/(tabs)/home')}
             >
-              <Home size={24} color="#6B7280" strokeWidth={2} />
+              <Home size={32} color="#6B7280" strokeWidth={2} style={{ opacity: 0.6 }} />
             </TouchableOpacity>
             <TouchableOpacity 
               style={[styles.navButton, styles.navButtonActive]}
             >
-              <Gamepad2 size={24} color="#22C55E" strokeWidth={2.5} style={styles.navIconGlow} />
+              <Gamepad2 size={32} color="#FF9500" strokeWidth={2.5} style={styles.navIconGlow} />
             </TouchableOpacity>
             <TouchableOpacity 
               style={styles.navButton}
               onPress={() => router.push('/(tabs)/profile')}
             >
-              <User size={24} color="#6B7280" strokeWidth={2} />
+              <User size={32} color="#6B7280" strokeWidth={2} style={{ opacity: 0.6 }} />
             </TouchableOpacity>
-          </View>
+          </View> */}
 
           {/* Header - Same as Tutor Page */}
           <View style={styles.header}>
             <View style={styles.headerLeft}>
-              <Image 
-                source={require('../../assets/images/Logo_Long.png')} 
-                style={styles.headerLogo}
-                resizeMode="contain"
-              />
+              {/* Logo removed */}
             </View>
             <View style={styles.headerRight}>
               {/* Current Room Indicator */}
               <View style={styles.currentRoomIndicator}>
-                <Globe size={16} color="#FFFFFF" />
+                <Globe size={16} color="#58CC02" />
                 <Text style={styles.currentRoomText}>
                   {currentLanguage === 'en' ? '🇺🇸 English Room' : '🇲🇾 Malay Room'}
                   </Text>
@@ -2124,6 +2120,19 @@ export default function LepakScreen() {
                 onPress={() => setShowSettingsMenu(true)}
               >
                 <Settings size={20} color="#FFFFFF" />
+              </TouchableOpacity>
+              
+              <TouchableOpacity 
+                style={styles.exitButton}
+                onPress={async () => {
+                  // Leave the room
+                  await leaveRoom();
+                  setHasJoinedRoom(false);
+                  // Navigate to community tab
+                  router.push('/(tabs)/community');
+                }}
+              >
+                <X size={20} color="#FFFFFF" />
               </TouchableOpacity>
             </View>
           </View>
@@ -2146,20 +2155,28 @@ export default function LepakScreen() {
                         activeOpacity={0.9}
                       >
                       <LinearGradient
-                        colors={isActive ? ['#ff6b6b', '#ff9f43'] : ['#6bc1ff', '#58e0ff']}
+                        colors={isActive ? ['#58CC02', '#4CAF00'] : ['#FFFFFF', '#F5F5F5']}
                         start={{ x: 0, y: 0 }}
                         end={{ x: 1, y: 1 }}
                         style={styles.roomButton}
                       >
                         <View style={styles.roomButtonGloss} />
                         <View style={styles.roomButtonContent}>
-                          <View style={styles.roomIconBadge}>
-                            <IconComponent size={16} color={'#FFFFFF'} />
+                          <View style={[
+                            styles.roomIconBadge,
+                            isActive && { backgroundColor: 'rgba(255,255,255,0.3)', borderColor: '#FFFFFF' },
+                            !isActive && { backgroundColor: '#58CC02', borderColor: '#4CAF00' }
+                          ]}>
+                            <IconComponent size={16} color="#FFFFFF" />
                           </View>
                           <Text style={[styles.roomButtonLabel, isActive && styles.roomButtonLabelActive]}>
                             {room.name}
                           </Text>
-                          <View style={styles.roomPlayerCountBadge}>
+                          <View style={[
+                            styles.roomPlayerCountBadge,
+                            isActive && { backgroundColor: 'rgba(255,255,255,0.3)', borderColor: '#FFFFFF' },
+                            !isActive && { backgroundColor: '#58CC02', borderColor: '#4CAF00' }
+                          ]}>
                             <Users size={10} color="#FFFFFF" />
                             <Text style={styles.roomPlayerCountText}>{room.players.length}</Text>
                           </View>
@@ -2334,27 +2351,6 @@ export default function LepakScreen() {
                       <View style={styles.settingsMenuTextContainer}>
                         <Text style={styles.settingsMenuItemText}>Change Room</Text>
                         <Text style={styles.settingsMenuItemSubtext}>Switch language or map</Text>
-                      </View>
-                    </TouchableOpacity>
-
-                    {/* Exit Game */}
-                    <TouchableOpacity
-                      style={[styles.settingsMenuItem, styles.settingsMenuItemDanger]}
-                      onPress={async () => {
-                        // Leave the room
-                        await leaveRoom();
-                        setHasJoinedRoom(false);
-                        setShowSettingsMenu(false);
-                        // Navigate to community tab
-                        router.push('/(tabs)/community');
-                      }}
-                    >
-                      <View style={styles.settingsMenuIcon}>
-                        <Text style={styles.settingsMenuEmoji}>🚪</Text>
-                      </View>
-                      <View style={styles.settingsMenuTextContainer}>
-                        <Text style={[styles.settingsMenuItemText, styles.settingsMenuItemTextDanger]}>Exit Game</Text>
-                        <Text style={styles.settingsMenuItemSubtext}>Leave Lepak and return to community</Text>
                       </View>
                     </TouchableOpacity>
                   </View>
@@ -2651,17 +2647,37 @@ const styles = StyleSheet.create({
   settingsButton: {
     width: 40,
     height: 40,
-    borderRadius: 4,
-    backgroundColor: '#1a1a1a',
-    borderWidth: 1,
-    borderColor: '#333333',
+    borderRadius: 12,
+    backgroundColor: '#58CC02',
     justifyContent: 'center',
     alignItems: 'center',
+    borderBottomWidth: 4,
+    borderRightWidth: 4,
+    borderBottomColor: '#4BA600',
+    borderRightColor: '#4BA600',
     shadowColor: '#000000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
+    shadowOpacity: 0.1,
     shadowRadius: 4,
-    elevation: 3,
+    elevation: 2,
+  },
+  exitButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: '#FF6B6B',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderBottomWidth: 4,
+    borderRightWidth: 4,
+    borderBottomColor: '#E55555',
+    borderRightColor: '#E55555',
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+    marginLeft: 10,
   },
   gameContainer: {
     flex: 1,
@@ -2682,13 +2698,18 @@ const styles = StyleSheet.create({
     transform: [{ translateY: -1 }],
   },
   roomButton: {
-    borderRadius: 8,
-    paddingVertical: 8,
-    paddingHorizontal: 12,
+    borderRadius: 16,
+    paddingVertical: 10,
+    paddingHorizontal: 14,
     minWidth: 80,
-    borderWidth: 2,
-    borderColor: '#ffffff60',
+    borderWidth: 3,
+    borderColor: '#FFFFFF',
     overflow: 'hidden',
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 4,
   },
   roomButtonContent: {
     flexDirection: 'row',
@@ -2700,24 +2721,20 @@ const styles = StyleSheet.create({
     width: 24,
     height: 24,
     borderRadius: 12,
-    backgroundColor: 'rgba(255,255,255,0.25)',
     justifyContent: 'center',
     alignItems: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.5)',
+    borderWidth: 2,
   },
   roomButtonLabel: {
     flex: 1,
-    color: '#FFFFFF',
+    color: '#333333',
     fontSize: 12,
-    fontWeight: '800',
+    fontWeight: '700',
     letterSpacing: 0.3,
-    textShadowColor: '#000000',
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 1,
   },
   roomButtonLabelActive: {
-    textShadowColor: '#5d2c00',
+    color: '#FFFFFF',
+    fontWeight: '800',
   },
   roomPlayerCountBadge: {
     flexDirection: 'row',
@@ -2725,10 +2742,8 @@ const styles = StyleSheet.create({
     gap: 2,
     paddingHorizontal: 6,
     paddingVertical: 2,
-    borderRadius: 6,
-    backgroundColor: 'rgba(0,0,0,0.3)',
+    borderRadius: 8,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.3)',
   },
   roomPlayerCountText: {
     fontSize: 9,
@@ -2927,13 +2942,13 @@ const styles = StyleSheet.create({
     zIndex: 1001,
   },
   floatingChatWrapper: {
-    backgroundColor: 'rgba(0, 0, 0, 0.9)',
-    borderRadius: 16,
-    borderWidth: 2,
-    borderColor: 'rgba(255, 255, 255, 0.4)',
-    shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.4,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 20,
+    borderWidth: 3,
+    borderColor: '#58CC02',
+    shadowColor: '#58CC02',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
     shadowRadius: 12,
     elevation: 8,
     flexDirection: 'row',
@@ -2941,29 +2956,28 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 12,
     gap: 12,
-    backdropFilter: 'blur(10px)',
   },
   floatingChatInputTouchable: {
     flex: 1,
     paddingVertical: 12,
     paddingHorizontal: 16,
-    borderRadius: 8,
-    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    borderRadius: 16,
+    backgroundColor: '#F5F5F5',
     minHeight: 40,
     justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.2)',
+    borderWidth: 2,
+    borderColor: '#E0E0E0',
   },
   floatingChatInputText: {
     fontSize: 16,
-    color: '#FFFFFF',
+    color: '#333333',
     textAlignVertical: 'center',
   },
   floatingChatInputTextEmpty: {
-    color: 'rgba(255, 255, 255, 0.7)',
+    color: '#999999',
   },
   floatingChatInputTextFilled: {
-    color: '#FFFFFF',
+    color: '#333333',
     fontWeight: '500',
   },
   characterCount: {
@@ -2978,44 +2992,38 @@ const styles = StyleSheet.create({
     borderRadius: 3,
   },
   floatingEmoteButton: {
-    backgroundColor: 'rgba(255, 255, 255, 0.15)',
-    borderRadius: 2,
-    paddingHorizontal: 8,
-    paddingVertical: 6,
+    backgroundColor: '#F5F5F5',
+    borderRadius: 12,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
     justifyContent: 'center',
     alignItems: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.3)',
+    borderWidth: 2,
+    borderColor: '#E0E0E0',
     pointerEvents: 'auto',
   },
   floatingSendButton: {
-    backgroundColor: 'rgba(255, 255, 255, 0.15)',
-    borderRadius: 4,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
+    backgroundColor: '#58CC02',
+    borderRadius: 16,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
     justifyContent: 'center',
     alignItems: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.3)',
-    shadowColor: '#000000',
+    borderWidth: 3,
+    borderColor: '#4CAF00',
+    shadowColor: '#58CC02',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.4,
     shadowRadius: 8,
     elevation: 6,
-    backdropFilter: 'blur(20px)',
-    minHeight: 24,
+    minHeight: 40,
     pointerEvents: 'auto',
-    transform: [{ skewX: '-8deg' }],
   },
   floatingSendText: {
     color: '#FFFFFF',
     fontSize: 14,
-    fontWeight: '900',
-    letterSpacing: 2,
-    textShadowColor: '#000000',
-    textShadowOffset: { width: 1, height: 1 },
-    textShadowRadius: 2,
-    transform: [{ skewX: '8deg' }],
+    fontWeight: '800',
+    letterSpacing: 0.5,
     fontFamily: 'System',
   },
   hiddenInput: {
@@ -3039,28 +3047,30 @@ const styles = StyleSheet.create({
   accessoryInput: {
     flex: 1,
     backgroundColor: '#FFFFFF',
-    borderRadius: 20,
+    borderRadius: 16,
     paddingHorizontal: 16,
-    paddingVertical: 8,
+    paddingVertical: 10,
     fontSize: 16,
-    color: '#000000',
-    borderWidth: 0.5,
-    borderColor: '#C6C6C6',
+    color: '#333333',
+    borderWidth: 2,
+    borderColor: '#E0E0E0',
     marginRight: 8,
     maxHeight: 100,
   },
   accessorySendButton: {
-    backgroundColor: '#007AFF',
-    borderRadius: 20,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    minWidth: 60,
+    backgroundColor: '#58CC02',
+    borderRadius: 16,
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    minWidth: 70,
     alignItems: 'center',
+    borderWidth: 3,
+    borderColor: '#4CAF00',
   },
   accessorySendText: {
     color: '#FFFFFF',
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: '700',
   },
   spriteSelectorOverlay: {
     position: 'absolute',
@@ -3074,13 +3084,13 @@ const styles = StyleSheet.create({
     zIndex: 1000,
   },
   spriteSelectorContainer: {
-    backgroundColor: 'rgba(0, 0, 0, 0.9)',
-    borderRadius: 20,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 24,
     borderWidth: 3,
-    borderColor: '#4A90E2',
-    shadowColor: '#4A90E2',
+    borderColor: '#58CC02',
+    shadowColor: '#58CC02',
     shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.6,
+    shadowOpacity: 0.3,
     shadowRadius: 20,
     elevation: 20,
     width: '90%',
@@ -3093,28 +3103,28 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 20,
     paddingVertical: 15,
-    borderBottomWidth: 2,
-    borderBottomColor: '#4A90E2',
-    backgroundColor: 'rgba(74, 144, 226, 0.2)',
+    borderBottomWidth: 3,
+    borderBottomColor: '#58CC02',
+    backgroundColor: '#F5F5F5',
   },
   spriteSelectorTitle: {
-    color: '#FFFFFF',
+    color: '#333333',
     fontSize: 20,
     fontWeight: '800',
-    letterSpacing: 1,
+    letterSpacing: 0.5,
   },
   spriteSelectorClose: {
-    width: 30,
-    height: 30,
-    borderRadius: 15,
-    backgroundColor: '#FF4444',
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#F5F5F5',
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 2,
-    borderColor: '#FFFFFF',
+    borderColor: '#E0E0E0',
   },
   spriteSelectorCloseText: {
-    color: '#FFFFFF',
+    color: '#666666',
     fontSize: 16,
     fontWeight: '800',
   },
@@ -3131,25 +3141,25 @@ const styles = StyleSheet.create({
   spriteOption: {
     width: 100,
     height: 120,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    borderRadius: 15,
+    backgroundColor: '#F5F5F5',
+    borderRadius: 16,
     borderWidth: 2,
-    borderColor: 'rgba(255, 255, 255, 0.3)',
+    borderColor: '#E0E0E0',
     alignItems: 'center',
     justifyContent: 'center',
     padding: 10,
     position: 'relative',
     shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 5,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
   },
   spriteOptionSelected: {
-    borderColor: '#4A90E2',
-    backgroundColor: 'rgba(74, 144, 226, 0.2)',
-    shadowColor: '#4A90E2',
-    shadowOpacity: 0.6,
+    borderColor: '#58CC02',
+    backgroundColor: '#E8F5E9',
+    shadowColor: '#58CC02',
+    shadowOpacity: 0.3,
   },
   spritePreview: {
     width: 60,
@@ -3163,7 +3173,7 @@ const styles = StyleSheet.create({
     height: 60,
   },
   spriteOptionText: {
-    color: '#FFFFFF',
+    color: '#333333',
     fontSize: 12,
     fontWeight: '600',
     textAlign: 'center',
@@ -3172,10 +3182,10 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 5,
     right: 5,
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    backgroundColor: '#4A90E2',
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: '#58CC02',
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 2,
@@ -3320,13 +3330,18 @@ const styles = StyleSheet.create({
     zIndex: 1000,
   },
   roomSelectionContainer: {
-    backgroundColor: '#1a1a1a',
-    borderRadius: 20,
-    padding: 20,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 24,
+    padding: 24,
     width: '90%',
     maxHeight: '80%',
-    borderWidth: 1,
-    borderColor: '#333',
+    borderWidth: 3,
+    borderColor: '#58CC02',
+    shadowColor: '#58CC02',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.3,
+    shadowRadius: 16,
+    elevation: 12,
   },
   roomSelectionHeader: {
     flexDirection: 'row',
@@ -3337,18 +3352,20 @@ const styles = StyleSheet.create({
   roomSelectionTitle: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#FFFFFF',
+    color: '#333333',
   },
   closeButton: {
-    width: 30,
-    height: 30,
-    borderRadius: 15,
-    backgroundColor: '#333',
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#F5F5F5',
+    borderWidth: 2,
+    borderColor: '#E0E0E0',
     justifyContent: 'center',
     alignItems: 'center',
   },
   closeButtonText: {
-    color: '#FFFFFF',
+    color: '#666666',
     fontSize: 18,
     fontWeight: 'bold',
   },
@@ -3455,39 +3472,39 @@ const styles = StyleSheet.create({
   languageRoomTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#FFFFFF',
+    color: '#333333',
     textAlign: 'center',
     marginBottom: 10,
   },
   languageRoomOption: {
-    backgroundColor: '#2a2a2a',
-    borderRadius: 15,
+    backgroundColor: '#F5F5F5',
+    borderRadius: 20,
     padding: 20,
-    borderWidth: 2,
-    borderColor: '#333',
+    borderWidth: 3,
+    borderColor: '#E0E0E0',
     alignItems: 'center',
   },
   languageRoomOptionSelected: {
-    backgroundColor: '#4A90E2',
-    borderColor: '#4A90E2',
+    backgroundColor: '#58CC02',
+    borderColor: '#4CAF00',
   },
   languageRoomText: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#FFFFFF',
+    color: '#333333',
     marginBottom: 5,
   },
   languageRoomSubtext: {
     fontSize: 14,
-    color: '#CCCCCC',
+    color: '#666666',
   },
   roomSelectionFooter: {
     marginTop: 20,
     padding: 16,
-    backgroundColor: 'rgba(74, 144, 226, 0.1)',
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: '#4A90E2',
+    backgroundColor: '#E8F5E9',
+    borderRadius: 16,
+    borderWidth: 2,
+    borderColor: '#58CC02',
     gap: 10,
   },
   roomInfoInline: {
@@ -3498,34 +3515,44 @@ const styles = StyleSheet.create({
   },
   roomInfoText: {
     fontSize: 13,
-    color: '#FFFFFF',
+    color: '#333333',
     fontWeight: '600',
   },
   roomInfoDivider: {
     fontSize: 13,
-    color: '#4A90E2',
+    color: '#58CC02',
   },
   roomSelectionFooterText: {
     fontSize: 12,
-    color: '#4A90E2',
+    color: '#333333',
     textAlign: 'center',
+    fontWeight: '600',
   },
   joinRoomButton: {
     marginTop: 20,
-    backgroundColor: '#4A90E2',
-    borderRadius: 12,
-    padding: 16,
+    backgroundColor: '#58CC02',
+    borderRadius: 20,
+    padding: 18,
     alignItems: 'center',
     justifyContent: 'center',
+    borderWidth: 3,
+    borderColor: '#4CAF00',
+    shadowColor: '#58CC02',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 6,
   },
   joinRoomButtonDisabled: {
-    backgroundColor: '#333',
-    opacity: 0.5,
+    backgroundColor: '#E0E0E0',
+    borderColor: '#CCCCCC',
+    opacity: 0.6,
   },
   joinRoomButtonText: {
     color: '#FFFFFF',
     fontSize: 18,
-    fontWeight: 'bold',
+    fontWeight: '800',
+    letterSpacing: 0.5,
   },
   // Map selection styles
   mapSelectionContainer: {
@@ -3606,19 +3633,24 @@ const styles = StyleSheet.create({
   currentRoomIndicator: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#1a1a1a',
-    borderRadius: 8,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
     paddingHorizontal: 12,
     paddingVertical: 8,
-    borderWidth: 1,
-    borderColor: '#333',
+    borderWidth: 2,
+    borderColor: '#58CC02',
     marginRight: 10,
     gap: 6,
+    shadowColor: '#58CC02',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 3,
   },
   currentRoomText: {
-    color: '#FFFFFF',
+    color: '#333333',
     fontSize: 12,
-    fontWeight: '600',
+    fontWeight: '700',
   },
   // Settings menu styles
   settingsMenuContent: {
@@ -3628,22 +3660,24 @@ const styles = StyleSheet.create({
   settingsMenuItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#2a2a2a',
-    borderRadius: 12,
+    backgroundColor: '#F5F5F5',
+    borderRadius: 16,
     padding: 16,
-    borderWidth: 1,
-    borderColor: '#333',
+    borderWidth: 2,
+    borderColor: '#E0E0E0',
     gap: 12,
   },
   settingsMenuItemDanger: {
     borderColor: '#FF6B6B',
-    backgroundColor: 'rgba(255, 107, 107, 0.1)',
+    backgroundColor: '#FFF5F5',
   },
   settingsMenuIcon: {
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: '#1a1a1a',
+    backgroundColor: '#FFFFFF',
+    borderWidth: 2,
+    borderColor: '#E0E0E0',
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -3654,16 +3688,16 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   settingsMenuItemText: {
-    color: '#FFFFFF',
+    color: '#333333',
     fontSize: 16,
-    fontWeight: 'bold',
+    fontWeight: '700',
     marginBottom: 4,
   },
   settingsMenuItemTextDanger: {
     color: '#FF6B6B',
   },
   settingsMenuItemSubtext: {
-    color: '#888',
+    color: '#666666',
     fontSize: 13,
   },
   // Debug zoom info styles
@@ -3708,7 +3742,7 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: 'bold',
   },
-  // Custom Navigation Bar
+  // Custom Navigation Bar - Matching HomeScreen tab bar
   customNavigationBar: {
     position: 'absolute',
     bottom: 0,
@@ -3732,18 +3766,22 @@ const styles = StyleSheet.create({
   navButton: {
     alignItems: 'center',
     justifyContent: 'center',
-    width: 40,
-    height: 40,
-    borderRadius: 8,
+    width: 48,
+    height: 48,
+    borderRadius: 12,
+    padding: 8,
   },
   navButtonActive: {
-    backgroundColor: 'rgba(34, 197, 94, 0.1)',
+    backgroundColor: '#FFF4E6',
+    borderWidth: 2,
+    borderColor: '#FF9500',
+    borderRadius: 12,
   },
   navIconGlow: {
-    shadowColor: '#22C55E',
+    shadowColor: '#FF9500',
     shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.8,
-    shadowRadius: 8,
-    elevation: 8,
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 4,
   },
 });

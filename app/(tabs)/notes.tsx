@@ -172,6 +172,13 @@ export default function NotesPage() {
 
   // Handle delete sticky note
   const handleDeleteStickyNote = async (noteId: string) => {
+    // Validate note ID before proceeding
+    if (!noteId || noteId.trim() === '' || noteId === 'undefined') {
+      console.error('Error: Note ID is undefined, empty, or invalid:', noteId);
+      Alert.alert('Error', 'Cannot delete note: Note ID is missing');
+      return;
+    }
+
     Alert.alert(
       'Delete Note',
       'Are you sure you want to delete this note?',
@@ -182,6 +189,13 @@ export default function NotesPage() {
           style: 'destructive',
           onPress: async () => {
             try {
+              // Validate note ID again before deletion
+              if (!noteId || noteId.trim() === '' || noteId === 'undefined') {
+                console.error('Error: Note ID is undefined, empty, or invalid during deletion:', noteId);
+                Alert.alert('Error', 'Cannot delete note: Note ID is missing');
+                return;
+              }
+
               const currentUser = await authService.getCurrentUser();
               if (!currentUser) {
                 Alert.alert('Error', 'User not authenticated');
@@ -197,8 +211,13 @@ export default function NotesPage() {
 
               if (error) {
                 console.error('Error deleting session sticky note:', error);
-                // Fallback to regular delete
-                await notesService.deleteStickyNote(noteId);
+                // Only try fallback if noteId is valid
+                if (noteId && noteId.trim() !== '' && noteId !== 'undefined') {
+                  await notesService.deleteStickyNote(noteId);
+                } else {
+                  Alert.alert('Error', 'Failed to delete note: Invalid note ID');
+                  return;
+                }
               }
 
               loadStickyNotes();
@@ -286,12 +305,6 @@ export default function NotesPage() {
   );
 
   // Header animation styles based on scroll
-  const headerHeight = scrollY.interpolate({
-    inputRange: [0, 100],
-    outputRange: [55 + insets.top, 48 + insets.top],
-    extrapolate: 'clamp',
-  });
-
   const headerOpacity = scrollY.interpolate({
     inputRange: [0, 100],
     outputRange: [1, 0.95],
@@ -300,7 +313,7 @@ export default function NotesPage() {
 
   const titleFontSize = scrollY.interpolate({
     inputRange: [0, 100],
-    outputRange: [20, 20],
+    outputRange: [20, 18],
     extrapolate: 'clamp',
   });
 
@@ -342,7 +355,7 @@ export default function NotesPage() {
   return (
     <Animated.View style={[styles.container, dynamicStyles.container, { opacity: pageFadeAnim }]}>
       {/* Header with Dark Background and Glassmorphism on Scroll */}
-      <Animated.View style={[styles.header, { height: headerHeight, opacity: headerOpacity }]}>
+      <Animated.View style={[styles.header, { opacity: headerOpacity }]}>
         <Animated.View 
           style={[
             styles.headerDarkBackground,
@@ -380,7 +393,7 @@ export default function NotesPage() {
         <View style={styles.sessionButtonsContainer}>
           <TouchableOpacity 
             style={styles.newSessionButton}
-            onPress={() => router.push('/record')}
+            onPress={() => router.push('/(tabs)/record')}
           >
             <Plus size={20} color="#FFFFFF" />
             <Text style={styles.newSessionButtonText}>New</Text>
@@ -540,6 +553,11 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     flexGrow: 1,
+  },
+  header: {
+    paddingTop: 60,
+    paddingHorizontal: 20,
+    paddingBottom: 0,
   },
   headerTop: {
     flexDirection: 'row',
@@ -911,14 +929,13 @@ const styles = StyleSheet.create({
   header: {
     position: 'relative',
     overflow: 'hidden',
-    zIndex: 1000,
+    zIndex: 100,
     marginBottom: 0,
     shadowColor: '#000000',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
-    elevation: 1000,
-    backgroundColor: '#000000',
+    elevation: 8,
   },
   headerDarkBackground: {
     position: 'absolute',
@@ -958,7 +975,6 @@ const styles = StyleSheet.create({
     pointerEvents: 'box-none',
   },
   headerTitle: {
-    fontSize: 20,
     fontFamily: 'Fredoka-SemiBold',
     fontWeight: '600',
     letterSpacing: 0.3,

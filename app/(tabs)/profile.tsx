@@ -283,11 +283,11 @@ export default function ProfileScreen() {
       case 'level_up':
         return '#FFD700';
       case 'achievement':
-        return '#00FF00';
+        return '#FF8C00';
       case 'streak':
         return '#FF9800';
       default:
-        return '#4ECDC4';
+        return '#FF8C00';
     }
   };
 
@@ -516,8 +516,12 @@ export default function ProfileScreen() {
             setSettingsVisible(false);
             try {
               await logout();
+              // Navigate to login page after logout
+              router.replace('/auth/login');
             } catch (error) {
               console.error('Logout error:', error);
+              // Still navigate to login even if there's an error
+              router.replace('/auth/login');
             }
           },
         },
@@ -627,137 +631,137 @@ export default function ProfileScreen() {
     }
   };
 
-  // Dynamic styles based on theme
+  // Dynamic styles based on theme - Duolingo style (clean white cards)
   const dynamicStyles = {
     container: {
-      backgroundColor: isDark ? '#000000' : '#FFFFFF',
+      backgroundColor: isDark ? '#000000' : '#F5F5F5',
     },
     headerTitle: {
       color: isDark ? '#FFFFFF' : '#000000',
     },
     headerButton: {
-      backgroundColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)',
+      backgroundColor: isDark ? 'rgba(255, 255, 255, 0.1)' : '#FFFFFF',
     },
     avatar: {
-      backgroundColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)',
+      backgroundColor: isDark ? 'rgba(255, 255, 255, 0.1)' : '#E8E8E8',
     },
     avatarText: {
       color: isDark ? '#FFFFFF' : '#000000',
     },
     editAvatarButton: {
-      backgroundColor: isDark ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.1)',
+      backgroundColor: isDark ? 'rgba(255, 255, 255, 0.2)' : '#FFFFFF',
     },
     username: {
       color: isDark ? '#FFFFFF' : '#000000',
     },
     userHandleInline: {
-      color: isDark ? '#999999' : '#888888',
+      color: isDark ? '#999999' : '#666666',
     },
     userRank: {
       color: isDark ? '#CCCCCC' : '#666666',
     },
     userSchool: {
-      color: isDark ? '#AAAAAA' : '#888888',
+      color: isDark ? '#AAAAAA' : '#666666',
     },
     userGrade: {
-      color: isDark ? '#AAAAAA' : '#888888',
+      color: isDark ? '#AAAAAA' : '#666666',
     },
     statusText: {
       color: isDark ? '#CCCCCC' : '#666666',
     },
     statCard: {
-      backgroundColor: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)',
-      borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)',
+      backgroundColor: '#FFFFFF',
+      borderColor: '#E0E0E0',
     },
     statNumber: {
-      color: isDark ? '#FFFFFF' : '#000000',
+      color: '#000000',
     },
     statLabel: {
-      color: isDark ? '#CCCCCC' : '#666666',
+      color: '#666666',
     },
     premiumCard: {
-      backgroundColor: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)',
+      backgroundColor: '#FFFFFF',
     },
     premiumTitle: {
-      color: '#FFFFFF',
+      color: '#000000',
     },
     premiumSubtitle: {
-      color: 'rgba(255, 255, 255, 0.9)',
+      color: '#666666',
     },
     sectionTitle: {
       color: isDark ? '#FFFFFF' : '#000000',
     },
     menuItem: {
-      backgroundColor: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)',
-      borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)',
+      backgroundColor: '#FFFFFF',
+      borderColor: '#E0E0E0',
     },
     menuTitle: {
-      color: isDark ? '#FFFFFF' : '#000000',
+      color: '#000000',
     },
     menuIcon: {
-      backgroundColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)',
+      backgroundColor: '#F0F0F0',
     },
     rankingCard: {
-      backgroundColor: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)',
-      borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)',
+      backgroundColor: '#FFFFFF',
+      borderColor: '#E0E0E0',
     },
     currentRank: {
-      color: isDark ? '#FFFFFF' : '#000000',
+      color: '#000000',
     },
     rankDescription: {
-      color: isDark ? '#CCCCCC' : '#666666',
+      color: '#666666',
     },
     progressText: {
-      color: isDark ? '#FFFFFF' : '#000000',
+      color: '#000000',
     },
     progressTrack: {
-      backgroundColor: isDark ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.2)',
+      backgroundColor: '#E8E8E8',
     },
     nextRankText: {
-      color: isDark ? '#CCCCCC' : '#666666',
+      color: '#666666',
     },
     achievementCard: {
-      backgroundColor: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)',
-      borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)',
+      backgroundColor: '#FFFFFF',
+      borderColor: '#E0E0E0',
     },
     achievementTitle: {
-      color: isDark ? '#FFFFFF' : '#000000',
+      color: '#000000',
     },
     settingsModal: {
       backgroundColor: isDark ? '#1a1a1a' : '#FFFFFF',
-      borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)',
+      borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : '#E0E0E0',
     },
     modalTitle: {
       color: isDark ? '#FFFFFF' : '#000000',
     },
     modalHeader: {
-      borderBottomColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)',
+      borderBottomColor: isDark ? 'rgba(255, 255, 255, 0.1)' : '#E0E0E0',
     },
     settingsItem: {
-      borderBottomColor: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)',
+      borderBottomColor: isDark ? 'rgba(255, 255, 255, 0.05)' : '#E0E0E0',
     },
     settingsTitle: {
       color: isDark ? '#FFFFFF' : '#000000',
     },
     settingsIcon: {
-      backgroundColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)',
+      backgroundColor: isDark ? 'rgba(255, 255, 255, 0.1)' : '#F0F0F0',
     },
     toggleSwitch: {
-      backgroundColor: isDark ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.2)',
+      backgroundColor: isDark ? 'rgba(255, 255, 255, 0.2)' : '#E0E0E0',
     },
     notificationDropdown: {
       backgroundColor: isDark ? '#1a1a1a' : '#FFFFFF',
-      borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)',
+      borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : '#E0E0E0',
     },
     notificationHeader: {
-      borderBottomColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)',
+      borderBottomColor: isDark ? 'rgba(255, 255, 255, 0.1)' : '#E0E0E0',
     },
     notificationTitle: {
       color: isDark ? '#FFFFFF' : '#000000',
     },
     notificationItem: {
-      backgroundColor: isDark ? 'rgba(255, 255, 255, 0.03)' : 'rgba(0, 0, 0, 0.03)',
-      borderBottomColor: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)',
+      backgroundColor: isDark ? 'rgba(255, 255, 255, 0.03)' : '#FAFAFA',
+      borderBottomColor: isDark ? 'rgba(255, 255, 255, 0.05)' : '#E0E0E0',
     },
     notificationItemTitle: {
       color: isDark ? '#FFFFFF' : '#000000',
@@ -769,22 +773,17 @@ export default function ProfileScreen() {
       color: isDark ? '#999999' : '#999999',
     },
     editInput: {
-      backgroundColor: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)',
-      color: isDark ? '#FFFFFF' : '#000000',
-      borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)',
+      backgroundColor: '#FFFFFF',
+      color: '#000000',
+      borderColor: '#E0E0E0',
     },
   };
 
   return (
     <Animated.View style={[styles.container, dynamicStyles.container, { opacity: pageFadeAnim }]}>
       <ScrollView showsVerticalScrollIndicator={false}>
-        {/* Modern Header with Background Image */}
+        {/* Duolingo Style Header */}
         <View style={styles.header}>
-          <Image 
-            source={require('../../assets/images/mobile.gif')}
-            style={styles.headerBackground}
-            resizeMode="cover"
-          />
           <View style={styles.headerContent}>
             <View style={styles.headerTop}>
               <Text style={styles.headerTitle}>Profile</Text>
@@ -793,7 +792,7 @@ export default function ProfileScreen() {
                   style={[styles.headerButton, dynamicStyles.headerButton]}
                   onPress={() => setNotificationsVisible(!notificationsVisible)}
                 >
-                  <Bell size={20} color={isDark ? "#FFFFFF" : "#000000"} />
+                  <Bell size={20} color="#FF8C00" />
                   {unreadCount > 0 && (
                     <View style={styles.notificationBadge}>
                       <Text style={styles.notificationText}>{unreadCount}</Text>
@@ -804,7 +803,7 @@ export default function ProfileScreen() {
                   style={[styles.headerButton, dynamicStyles.headerButton]}
                   onPress={() => setSettingsVisible(true)}
                 >
-                  <Settings size={20} color={isDark ? "#FFFFFF" : "#000000"} />
+                  <Settings size={20} color="#FF8C00" />
                 </TouchableOpacity>
               </View>
             </View>
@@ -822,7 +821,7 @@ export default function ProfileScreen() {
                         resizeMode="cover"
                       />
                     ) : (
-                      <Text style={[styles.avatarText, dynamicStyles.avatarText]}>
+                      <Text style={styles.avatarText}>
                         {selectedAvatar}
                       </Text>
                     )}
@@ -831,7 +830,7 @@ export default function ProfileScreen() {
                     style={[styles.editAvatarButton, dynamicStyles.editAvatarButton]}
                     onPress={() => setEditProfileVisible(true)}
                   >
-                    <Edit3 size={16} color={isDark ? "#FFFFFF" : "#000000"} />
+                    <Edit3 size={16} color="#FF8C00" />
                   </TouchableOpacity>
                 </View>
                 
@@ -845,7 +844,7 @@ export default function ProfileScreen() {
                   </View>
                   
                   <View style={styles.levelRow}>
-                    <View style={styles.levelBadgeSmall}>
+                    <View style={[styles.levelBadgeSmall, { backgroundColor: '#FF8C00' }]}>
                       <Text style={styles.levelBadgeIcon}>⚔️</Text>
                     </View>
                     <Text style={[styles.userLevel, dynamicStyles.userRank]}>{levelInfo.currentLevelName}</Text>
@@ -871,21 +870,21 @@ export default function ProfileScreen() {
          <Animatable.View animation="fadeInUp" delay={300} style={styles.statsSection}>
            <View style={styles.statsContainer}>
              <View style={[styles.statCard, dynamicStyles.statCard]}>
-               <View style={[styles.statIcon, { backgroundColor: '#FF6B6B' }]}>
+               <View style={[styles.statIcon, { backgroundColor: '#FF8C00' }]}>
                  <Trophy size={20} color="#FFFFFF" />
                </View>
                <Text style={[styles.statNumber, dynamicStyles.statNumber]}>{userStats.points}</Text>
                <Text style={[styles.statLabel, dynamicStyles.statLabel]}>Points</Text>
              </View>
              <View style={[styles.statCard, dynamicStyles.statCard]}>
-               <View style={[styles.statIcon, { backgroundColor: '#4ECDC4' }]}>
+               <View style={[styles.statIcon, { backgroundColor: '#FF9800' }]}>
                  <HelpCircle size={20} color="#FFFFFF" />
                </View>
                <Text style={[styles.statNumber, dynamicStyles.statNumber]}>{userStats.questionsAsked}</Text>
                <Text style={[styles.statLabel, dynamicStyles.statLabel]}>Questions</Text>
              </View>
              <View style={[styles.statCard, dynamicStyles.statCard]}>
-               <View style={[styles.statIcon, { backgroundColor: '#45B7D1' }]}>
+               <View style={[styles.statIcon, { backgroundColor: '#FF6B00' }]}>
                  <Clock size={20} color="#FFFFFF" />
                </View>
                <Text style={[styles.statNumber, dynamicStyles.statNumber]}>{userStats.timeWithTutor}h</Text>
@@ -894,28 +893,32 @@ export default function ProfileScreen() {
            </View>
          </Animatable.View>
 
-        {/* Premium Card */}
+        {/* Premium Card - 3D Duolingo Style */}
         <Animatable.View animation="fadeInUp" delay={400} style={styles.premiumSection}>
           <TouchableOpacity 
-            style={[styles.premiumCard, dynamicStyles.premiumCard]}
+            style={styles.premiumCard3D}
             onPress={() => setPremiumVisible(true)}
+            activeOpacity={0.9}
           >
+            <View style={styles.premiumCard3DShadow} />
             <LinearGradient
-              colors={['#FF8C00', '#FFA500', '#FF7F00']}
-              style={styles.premiumGradient}
+              colors={['#FF8C00', '#FF8C00', '#FF6B00']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.premiumCard3DContent}
             >
               <View style={styles.premiumContent}>
                 <View style={styles.premiumLeft}>
-                  <View style={styles.premiumIconContainer}>
-                    <Crown size={24} color="#FFFFFF" />
+                  <View style={styles.premiumIconContainer3D}>
+                    <Crown size={28} color="#FFFFFF" />
                   </View>
                   <View>
-                    <Text style={[styles.premiumTitle, dynamicStyles.premiumTitle]}>Upgrade to SPMind+</Text>
-                    <Text style={[styles.premiumSubtitle, dynamicStyles.premiumSubtitle]}>Unlock unlimited AI features</Text>
+                    <Text style={styles.premiumTitle3D}>Upgrade to SPMind+</Text>
+                    <Text style={styles.premiumSubtitle3D}>Unlock unlimited AI features</Text>
                   </View>
                 </View>
-                <View style={styles.premiumArrow}>
-                  <ChevronRight size={20} color="#FFFFFF" />
+                <View style={styles.premiumArrow3D}>
+                  <ChevronRight size={24} color="#FFFFFF" />
                 </View>
               </View>
             </LinearGradient>
@@ -934,11 +937,11 @@ export default function ProfileScreen() {
                 >
                   <View style={styles.menuLeft}>
                     <View style={[styles.menuIcon, dynamicStyles.menuIcon]}>
-                      <item.icon size={20} color={isDark ? "#FFFFFF" : "#000000"} />
+                      <item.icon size={20} color="#FF8C00" />
                     </View>
                     <Text style={[styles.menuTitle, dynamicStyles.menuTitle]}>{item.title}</Text>
                   </View>
-                  <ChevronRight size={20} color={isDark ? "#666666" : "#999999"} />
+                  <ChevronRight size={20} color="#999999" />
                 </TouchableOpacity>
               </Animatable.View>
             ))}
@@ -972,7 +975,7 @@ export default function ProfileScreen() {
                 </Text>
                 <View style={[styles.progressTrack, dynamicStyles.progressTrack]}>
                   <LinearGradient
-                    colors={[userStats.levelColor, userStats.levelColor + 'AA']}
+                    colors={['#FF8C00', '#FF6B00']}
                     style={[styles.progressFill, { width: `${userStats.progress}%` }]}
                   />
                 </View>
@@ -997,7 +1000,7 @@ export default function ProfileScreen() {
           
           {loadingAchievements ? (
             <View style={styles.achievementLoadingContainer}>
-              <ActivityIndicator size="large" color="#00FF00" />
+              <ActivityIndicator size="large" color="#FF8C00" />
             </View>
           ) : (
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.achievementsScroll}>
@@ -1014,14 +1017,14 @@ export default function ProfileScreen() {
                       achievement.earned && styles.achievementEarned
                     ]}
                   >
-                    <View style={[
-                      styles.achievementIcon,
-                      { 
-                        backgroundColor: achievement.earned ? subjectConfig.bgColor : (isDark ? '#333333' : '#e9ecef'),
-                        borderWidth: achievement.earned ? 2 : 0,
-                        borderColor: achievement.earned ? subjectConfig.color : 'transparent'
-                      }
-                    ]}>
+                      <View style={[
+                        styles.achievementIcon,
+                        { 
+                          backgroundColor: achievement.earned ? subjectConfig.bgColor : '#F0F0F0',
+                          borderWidth: achievement.earned ? 2 : 1,
+                          borderColor: achievement.earned ? subjectConfig.color : '#E0E0E0'
+                        }
+                      ]}>
                       <Text style={styles.achievementEmoji}>
                         {achievement.earned ? subjectConfig.icon : '🔒'}
                       </Text>
@@ -1030,13 +1033,13 @@ export default function ProfileScreen() {
                       {achievement.subject?.split(' ')[0]}
                     </Text>
                     <View style={styles.achievementProgressContainer}>
-                      <View style={[styles.achievementProgressBar, { backgroundColor: isDark ? '#333333' : '#e9ecef' }]}>
+                      <View style={[styles.achievementProgressBar, { backgroundColor: '#E8E8E8' }]}>
                         <View 
                           style={[
                             styles.achievementProgressFill,
                             { 
                               width: `${achievement.progress_percentage}%`,
-                              backgroundColor: achievement.earned ? subjectConfig.color : '#666666'
+                              backgroundColor: achievement.earned ? subjectConfig.color : '#FF8C00'
                             }
                           ]}
                         />
@@ -1070,7 +1073,7 @@ export default function ProfileScreen() {
               <View style={{ flexDirection: 'row', gap: 12 }}>
                 {unreadCount > 0 && (
                   <TouchableOpacity onPress={handleMarkAllAsRead}>
-                    <Text style={{ color: '#00FF00', fontSize: 14, fontFamily: 'Inter-Medium' }}>
+                    <Text style={{ color: '#FF8C00', fontSize: 14, fontFamily: 'Fredoka-Medium' }}>
                       Mark all read
                     </Text>
                   </TouchableOpacity>
@@ -1084,7 +1087,7 @@ export default function ProfileScreen() {
             <ScrollView style={styles.notificationList} showsVerticalScrollIndicator={false}>
               {loadingNotifications ? (
                 <View style={{ padding: 40, alignItems: 'center' }}>
-                  <ActivityIndicator size="large" color="#00FF00" />
+                  <ActivityIndicator size="large" color="#FF8C00" />
                 </View>
               ) : notifications.length === 0 ? (
                 <View style={{ padding: 40, alignItems: 'center' }}>
@@ -1172,7 +1175,7 @@ export default function ProfileScreen() {
                         resizeMode="cover"
                       />
                     ) : (
-                      <Text style={[styles.avatarText, dynamicStyles.avatarText]}>
+                      <Text style={styles.avatarText}>
                         {selectedAvatar}
                       </Text>
                     )}
@@ -1265,7 +1268,7 @@ export default function ProfileScreen() {
                 onPress={handleSaveProfile}
               >
                 <LinearGradient
-                  colors={['#00FF00', '#32CD32', '#00CC00']}
+                  colors={['#FF8C00', '#FF9800', '#FF6B00']}
                   style={styles.saveButtonGradient}
                 >
                   <Check size={20} color="#000000" />
@@ -1379,7 +1382,7 @@ export default function ProfileScreen() {
                 >
                   <View style={styles.planContent}>
                     <View style={styles.planLeft}>
-                      <View style={[styles.planIcon, { backgroundColor: '#4ECDC4' }]}>
+                      <View style={[styles.planIcon, { backgroundColor: '#FF8C00' }]}>
                         <BookOpen size={24} color="#FFFFFF" />
                       </View>
                       <View style={styles.planDetails}>
@@ -1406,8 +1409,8 @@ export default function ProfileScreen() {
                   </View>
                   <View style={styles.planContent}>
                     <View style={styles.planLeft}>
-                      <View style={[styles.planIcon, { backgroundColor: '#00FF00' }]}>
-                        <GraduationCap size={24} color="#000000" />
+                      <View style={[styles.planIcon, { backgroundColor: '#FF9800' }]}>
+                        <GraduationCap size={24} color="#FFFFFF" />
                       </View>
                       <View style={styles.planDetails}>
                         <Text style={[styles.planTitle, dynamicStyles.modalTitle]}>5 Subjects</Text>
@@ -1429,19 +1432,19 @@ export default function ProfileScreen() {
                 </Text>
                 <View style={styles.featuresList}>
                   <View style={styles.featureItem}>
-                    <Check size={16} color="#00FF00" />
+                    <Check size={16} color="#FF8C00" />
                     <Text style={[styles.featureText, dynamicStyles.userRank]}>Unlimited AI tutoring</Text>
                   </View>
                   <View style={styles.featureItem}>
-                    <Check size={16} color="#00FF00" />
+                    <Check size={16} color="#FF8C00" />
                     <Text style={[styles.featureText, dynamicStyles.userRank]}>24/7 homework help</Text>
                   </View>
                   <View style={styles.featureItem}>
-                    <Check size={16} color="#00FF00" />
+                    <Check size={16} color="#FF8C00" />
                     <Text style={[styles.featureText, dynamicStyles.userRank]}>Step-by-step solutions</Text>
                   </View>
                   <View style={styles.featureItem}>
-                    <Check size={16} color="#00FF00" />
+                    <Check size={16} color="#FF8C00" />
                     <Text style={[styles.featureText, dynamicStyles.userRank]}>Progress tracking</Text>
                   </View>
                 </View>
@@ -1457,21 +1460,15 @@ export default function ProfileScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#000000',
+    backgroundColor: '#F5F5F5',
   },
   header: {
     position: 'relative',
     overflow: 'hidden',
-    paddingBottom: 20,
-  },
-  headerBackground: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    width: '100%',
-    height: '100%',
+    paddingBottom: 30,
+    backgroundColor: '#FF8C00',
+    borderBottomLeftRadius: 24,
+    borderBottomRightRadius: 24,
   },
   headerContent: {
     paddingTop: 60,
@@ -1487,21 +1484,27 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     fontSize: 28,
-    fontFamily: 'SpaceGrotesk-Bold',
+    fontFamily: 'Fredoka-Bold',
     color: '#FFFFFF',
+    fontWeight: '700',
   },
   headerActions: {
     flexDirection: 'row',
     gap: 12,
   },
   headerButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: '#FFFFFF',
     justifyContent: 'center',
     alignItems: 'center',
     position: 'relative',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+    elevation: 4,
   },
   notificationBadge: {
     position: 'absolute',
@@ -1516,7 +1519,7 @@ const styles = StyleSheet.create({
   },
   notificationText: {
     fontSize: 10,
-    fontFamily: 'Inter-Bold',
+    fontFamily: 'Fredoka-Bold',
     color: '#FFFFFF',
   },
   profileSection: {
@@ -1532,19 +1535,25 @@ const styles = StyleSheet.create({
     position: 'relative',
   },
   avatar: {
-    width: 80,
-    height: 80,
-    borderRadius: 20,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    width: 90,
+    height: 90,
+    borderRadius: 24,
+    backgroundColor: '#FFFFFF',
     justifyContent: 'center',
     alignItems: 'center',
-    borderWidth: 3,
-    borderColor: 'rgba(255, 255, 255, 0.2)',
+    borderWidth: 4,
+    borderColor: '#FFFFFF',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    elevation: 6,
   },
   avatarText: {
-    fontSize: 32,
-    fontFamily: 'Inter-Bold',
-    color: '#FFFFFF',
+    fontSize: 36,
+    fontFamily: 'Fredoka-Bold',
+    color: '#FF8C00',
+    fontWeight: '700',
   },
   avatarImage: {
     width: '100%',
@@ -1553,16 +1562,21 @@ const styles = StyleSheet.create({
   },
   editAvatarButton: {
     position: 'absolute',
-    bottom: -5,
-    right: -5,
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    bottom: -2,
+    right: -2,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#FFFFFF',
     justifyContent: 'center',
     alignItems: 'center',
-    borderWidth: 2,
-    borderColor: '#000000',
+    borderWidth: 3,
+    borderColor: '#FF8C00',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 5,
   },
   userDetails: {
     alignItems: 'center',
@@ -1580,18 +1594,20 @@ const styles = StyleSheet.create({
   },
   username: {
     fontSize: 22,
-    fontFamily: 'Inter-Bold',
+    fontFamily: 'Fredoka-Bold',
     color: '#FFFFFF',
+    fontWeight: '700',
   },
   userHandleInline: {
     fontSize: 14,
-    fontFamily: 'Inter-Regular',
-    color: '#999999',
+    fontFamily: 'Fredoka-Regular',
+    color: '#FFFFFF',
     fontWeight: '400',
+    opacity: 0.8,
   },
   userHandle: {
     fontSize: 13,
-    fontFamily: 'Inter-Regular',
+    fontFamily: 'Fredoka-Regular',
     color: '#999999',
     marginBottom: 6,
   },
@@ -1605,35 +1621,36 @@ const styles = StyleSheet.create({
     width: 28,
     height: 28,
     borderRadius: 8,
-    backgroundColor: 'rgba(255, 215, 0, 0.2)',
+    backgroundColor: '#FF8C00',
     justifyContent: 'center',
     alignItems: 'center',
-    borderWidth: 1.5,
-    borderColor: 'rgba(255, 215, 0, 0.4)',
+    borderWidth: 0,
   },
   levelBadgeIcon: {
     fontSize: 16,
   },
   userLevel: {
     fontSize: 15,
-    fontFamily: 'Inter-Medium',
-    color: '#CCCCCC',
-    fontWeight: '500',
+    fontFamily: 'Fredoka-Medium',
+    color: '#FFFFFF',
+    fontWeight: '600',
   },
   userSchool: {
     fontSize: 14,
-    fontFamily: 'Inter-Regular',
-    color: '#AAAAAA',
+    fontFamily: 'Fredoka-Regular',
+    color: '#FFFFFF',
     marginBottom: 3,
+    opacity: 0.9,
   },
   userGrade: {
     fontSize: 14,
-    fontFamily: 'Inter-Regular',
-    color: '#AAAAAA',
+    fontFamily: 'Fredoka-Regular',
+    color: '#FFFFFF',
+    opacity: 0.9,
   },
   userRank: {
     fontSize: 16,
-    fontFamily: 'Inter-Medium',
+    fontFamily: 'Fredoka-Medium',
     color: '#CCCCCC',
     marginBottom: 8,
   },
@@ -1649,11 +1666,12 @@ const styles = StyleSheet.create({
   },
   statusText: {
     fontSize: 14,
-    fontFamily: 'Inter-Medium',
+    fontFamily: 'Fredoka-Medium',
     color: '#CCCCCC',
   },
   statsSection: {
     paddingHorizontal: 20,
+    marginTop: -10,
     marginBottom: 20,
   },
   statsContainer: {
@@ -1662,12 +1680,17 @@ const styles = StyleSheet.create({
   },
   statCard: {
     flex: 1,
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    backgroundColor: '#FFFFFF',
     borderRadius: 16,
     padding: 16,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
+    borderColor: '#E0E0E0',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
   },
   statIcon: {
     width: 40,
@@ -1676,28 +1699,52 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
   },
   statNumber: {
     fontSize: 20,
-    fontFamily: 'Inter-Bold',
-    color: '#FFFFFF',
+    fontFamily: 'Fredoka-Bold',
+    color: '#000000',
     marginBottom: 4,
+    fontWeight: '700',
   },
   statLabel: {
     fontSize: 12,
-    fontFamily: 'Inter-Medium',
-    color: '#CCCCCC',
+    fontFamily: 'Fredoka-Medium',
+    color: '#666666',
+    fontWeight: '500',
   },
   premiumSection: {
     paddingHorizontal: 20,
     marginBottom: 24,
   },
-  premiumCard: {
+  premiumCard3D: {
     borderRadius: 16,
-    overflow: 'hidden',
+    overflow: 'visible',
+    position: 'relative',
   },
-  premiumGradient: {
-    padding: 20,
+  premiumCard3DShadow: {
+    position: 'absolute',
+    bottom: -8,
+    left: 4,
+    right: 4,
+    height: 8,
+    backgroundColor: '#FF6B00',
+    borderRadius: 16,
+    opacity: 0.4,
+  },
+  premiumCard3DContent: {
+    padding: 22,
+    borderRadius: 16,
+    shadowColor: '#FF8C00',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.4,
+    shadowRadius: 12,
+    elevation: 10,
   },
   premiumContent: {
     flexDirection: 'row',
@@ -1708,39 +1755,46 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
+    flex: 1,
   },
-  premiumIconContainer: {
+  premiumIconContainer3D: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: 'rgba(255, 255, 255, 0.3)',
+  },
+  premiumTitle3D: {
+    fontSize: 20,
+    fontFamily: 'Fredoka-Bold',
+    color: '#FFFFFF',
+    marginBottom: 4,
+    fontWeight: '700',
+  },
+  premiumSubtitle3D: {
+    fontSize: 14,
+    fontFamily: 'Fredoka-Regular',
+    color: 'rgba(255, 255, 255, 0.95)',
+  },
+  premiumArrow3D: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  premiumTitle: {
-    fontSize: 18,
-    fontFamily: 'Inter-Bold',
-    color: '#FFFFFF',
-    marginBottom: 2,
-  },
-  premiumSubtitle: {
-    fontSize: 14,
-    fontFamily: 'Inter-Regular',
-    color: 'rgba(255, 255, 255, 0.9)',
-  },
-  premiumArrow: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    justifyContent: 'center',
-    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: 'rgba(255, 255, 255, 0.3)',
   },
   sectionTitle: {
     fontSize: 20,
-    fontFamily: 'Inter-Bold',
-    color: '#FFFFFF',
+    fontFamily: 'Fredoka-Bold',
+    color: '#000000',
     marginBottom: 16,
+    fontWeight: '700',
   },
   menuSection: {
     paddingHorizontal: 20,
@@ -1755,10 +1809,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 16,
     paddingHorizontal: 16,
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    backgroundColor: '#FFFFFF',
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
+    borderColor: '#E0E0E0',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
   },
   menuLeft: {
     flexDirection: 'row',
@@ -1769,25 +1828,31 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    backgroundColor: '#F0F0F0',
     justifyContent: 'center',
     alignItems: 'center',
   },
   menuTitle: {
     fontSize: 16,
-    fontFamily: 'Inter-Medium',
-    color: '#FFFFFF',
+    fontFamily: 'Fredoka-Medium',
+    color: '#000000',
+    fontWeight: '500',
   },
   rankingSection: {
     paddingHorizontal: 20,
     marginBottom: 24,
   },
   rankingCard: {
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    backgroundColor: '#FFFFFF',
     borderRadius: 16,
     padding: 20,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
+    borderColor: '#E0E0E0',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
   },
   rankingHeader: {
     flexDirection: 'row',
@@ -1821,7 +1886,7 @@ const styles = StyleSheet.create({
   },
   levelNumber: {
     fontSize: 28,
-    fontFamily: 'Inter-Bold',
+    fontFamily: 'Fredoka-Bold',
     color: '#FFFFFF',
     textShadowColor: 'rgba(0, 0, 0, 0.5)',
     textShadowOffset: { width: 0, height: 2 },
@@ -1829,14 +1894,15 @@ const styles = StyleSheet.create({
   },
   currentRank: {
     fontSize: 20,
-    fontFamily: 'Inter-Bold',
-    color: '#FFFFFF',
+    fontFamily: 'Fredoka-Bold',
+    color: '#000000',
     marginBottom: 2,
+    fontWeight: '700',
   },
   rankDescription: {
     fontSize: 12,
-    fontFamily: 'Inter-Regular',
-    color: '#CCCCCC',
+    fontFamily: 'Fredoka-Regular',
+    color: '#666666',
   },
   rankingProgress: {
     alignItems: 'flex-end',
@@ -1845,14 +1911,15 @@ const styles = StyleSheet.create({
   },
   progressText: {
     fontSize: 14,
-    fontFamily: 'Inter-Medium',
-    color: '#FFFFFF',
+    fontFamily: 'Fredoka-Medium',
+    color: '#000000',
     marginBottom: 8,
+    fontWeight: '500',
   },
   progressTrack: {
-    height: 6,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    borderRadius: 3,
+    height: 8,
+    backgroundColor: '#E8E8E8',
+    borderRadius: 4,
     overflow: 'hidden',
     width: '100%',
     marginBottom: 8,
@@ -1863,8 +1930,8 @@ const styles = StyleSheet.create({
   },
   nextRankText: {
     fontSize: 12,
-    fontFamily: 'Inter-Regular',
-    color: '#CCCCCC',
+    fontFamily: 'Fredoka-Regular',
+    color: '#666666',
   },
   achievementsSection: {
     paddingHorizontal: 20,
@@ -1876,16 +1943,22 @@ const styles = StyleSheet.create({
   },
   achievementCard: {
     width: 100,
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    backgroundColor: '#FFFFFF',
     borderRadius: 12,
     padding: 12,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
+    borderColor: '#E0E0E0',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
   },
   achievementEarned: {
-    backgroundColor: 'rgba(0, 255, 0, 0.1)',
-    borderColor: 'rgba(0, 255, 0, 0.3)',
+    backgroundColor: '#FFF3E0',
+    borderColor: '#FF8C00',
+    borderWidth: 2,
   },
   achievementIcon: {
     width: 40,
@@ -1900,17 +1973,18 @@ const styles = StyleSheet.create({
   },
   achievementTitle: {
     fontSize: 12,
-    fontFamily: 'Inter-Medium',
-    color: '#FFFFFF',
+    fontFamily: 'Fredoka-Medium',
+    color: '#000000',
     marginBottom: 8,
     textAlign: 'center',
+    fontWeight: '500',
   },
   achievementHeader: {
     marginBottom: 16,
   },
   achievementSubtitle: {
     fontSize: 13,
-    fontFamily: 'Inter-Regular',
+    fontFamily: 'Fredoka-Regular',
     color: '#CCCCCC',
     marginTop: 4,
   },
@@ -1926,7 +2000,7 @@ const styles = StyleSheet.create({
   achievementProgressBar: {
     width: '100%',
     height: 4,
-    backgroundColor: '#333333',
+    backgroundColor: '#E8E8E8',
     borderRadius: 2,
     overflow: 'hidden',
     marginBottom: 4,
@@ -1937,8 +2011,9 @@ const styles = StyleSheet.create({
   },
   achievementProgressText: {
     fontSize: 10,
-    fontFamily: 'Inter-Medium',
-    color: '#CCCCCC',
+    fontFamily: 'Fredoka-Medium',
+    color: '#666666',
+    fontWeight: '500',
   },
   modalOverlay: {
     flex: 1,
@@ -1964,7 +2039,7 @@ const styles = StyleSheet.create({
   },
   modalTitle: {
     fontSize: 24,
-    fontFamily: 'Inter-Bold',
+    fontFamily: 'Fredoka-Bold',
     color: '#FFFFFF',
   },
   closeButton: {
@@ -1996,7 +2071,7 @@ const styles = StyleSheet.create({
   },
   settingsTitle: {
     fontSize: 16,
-    fontFamily: 'Inter-Medium',
+    fontFamily: 'Fredoka-Medium',
     color: '#FFFFFF',
   },
   dangerItem: {
@@ -2018,7 +2093,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 5,
   },
   toggleActive: {
-    backgroundColor: '#00FF00',
+    backgroundColor: '#FF8C00',
   },
   notificationOverlay: {
     position: 'absolute',
@@ -2055,7 +2130,7 @@ const styles = StyleSheet.create({
   },
   notificationTitle: {
     fontSize: 18,
-    fontFamily: 'Inter-Bold',
+    fontFamily: 'Fredoka-Bold',
     color: '#FFFFFF',
   },
   notificationList: {
@@ -2085,20 +2160,20 @@ const styles = StyleSheet.create({
   },
   notificationItemTitle: {
     fontSize: 14,
-    fontFamily: 'Inter-Bold',
+    fontFamily: 'Fredoka-Bold',
     color: '#FFFFFF',
     marginBottom: 4,
   },
   notificationMessage: {
     fontSize: 12,
-    fontFamily: 'Inter-Regular',
+    fontFamily: 'Fredoka-Regular',
     color: '#CCCCCC',
     marginBottom: 4,
     lineHeight: 16,
   },
   notificationTime: {
     fontSize: 11,
-    fontFamily: 'Inter-Regular',
+    fontFamily: 'Fredoka-Regular',
     color: '#999999',
   },
   unreadDot: {
@@ -2108,11 +2183,11 @@ const styles = StyleSheet.create({
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: '#00FF00',
+    backgroundColor: '#FF8C00',
   },
   emptyNotificationText: {
     fontSize: 14,
-    fontFamily: 'Inter-Regular',
+    fontFamily: 'Fredoka-Regular',
     color: '#CCCCCC',
     marginTop: 16,
     textAlign: 'center',
@@ -2134,7 +2209,7 @@ const styles = StyleSheet.create({
   },
   editSectionTitle: {
     fontSize: 16,
-    fontFamily: 'Inter-Bold',
+    fontFamily: 'Fredoka-Bold',
     color: '#FFFFFF',
     marginBottom: 12,
   },
@@ -2154,7 +2229,7 @@ const styles = StyleSheet.create({
     borderColor: 'transparent',
   },
   avatarOptionSelected: {
-    borderColor: '#00FF00',
+    borderColor: '#FF8C00',
     borderWidth: 2,
   },
   avatarOptionEmoji: {
@@ -2177,7 +2252,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 16,
     fontSize: 16,
-    fontFamily: 'Inter-Regular',
+    fontFamily: 'Fredoka-Regular',
     color: '#FFFFFF',
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.1)',
@@ -2201,7 +2276,7 @@ const styles = StyleSheet.create({
   },
   saveButtonText: {
     fontSize: 16,
-    fontFamily: 'Inter-Bold',
+    fontFamily: 'Fredoka-Bold',
     color: '#000000',
   },
   currentAvatarContainer: {
@@ -2232,19 +2307,19 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
-    backgroundColor: '#00FF00',
+    backgroundColor: '#FF8C00',
     paddingVertical: 12,
     paddingHorizontal: 16,
     borderRadius: 12,
   },
   uploadButtonText: {
     fontSize: 14,
-    fontFamily: 'Inter-Bold',
+    fontFamily: 'Fredoka-Bold',
     color: '#000000',
   },
   orText: {
     fontSize: 14,
-    fontFamily: 'Inter-Regular',
+    fontFamily: 'Fredoka-Regular',
     color: '#999999',
     marginBottom: 12,
     textAlign: 'center',
@@ -2260,7 +2335,7 @@ const styles = StyleSheet.create({
   },
   usernamePrefix: {
     fontSize: 16,
-    fontFamily: 'Inter-Bold',
+    fontFamily: 'Fredoka-Bold',
     color: '#FFFFFF',
     marginRight: 4,
   },
@@ -2269,7 +2344,7 @@ const styles = StyleSheet.create({
     padding: 16,
     paddingLeft: 0,
     fontSize: 16,
-    fontFamily: 'Inter-Regular',
+    fontFamily: 'Fredoka-Regular',
     color: '#FFFFFF',
     backgroundColor: 'transparent',
     borderWidth: 0,
@@ -2288,7 +2363,7 @@ const styles = StyleSheet.create({
   },
   premiumDescription: {
     fontSize: 16,
-    fontFamily: 'Inter-Regular',
+    fontFamily: 'Fredoka-Regular',
     color: '#FFFFFF',
     marginBottom: 24,
     textAlign: 'center',
@@ -2303,21 +2378,21 @@ const styles = StyleSheet.create({
     position: 'relative',
   },
   popularPlan: {
-    borderColor: '#00FF00',
-    backgroundColor: 'rgba(0, 255, 0, 0.05)',
+    borderColor: '#FF8C00',
+    backgroundColor: 'rgba(255, 140, 0, 0.05)',
   },
   popularBadge: {
     position: 'absolute',
     top: -10,
     right: 20,
-    backgroundColor: '#00FF00',
+    backgroundColor: '#FF8C00',
     paddingHorizontal: 12,
     paddingVertical: 4,
     borderRadius: 12,
   },
   popularText: {
     fontSize: 10,
-    fontFamily: 'Inter-Bold',
+    fontFamily: 'Fredoka-Bold',
     color: '#000000',
     letterSpacing: 1,
   },
@@ -2344,13 +2419,13 @@ const styles = StyleSheet.create({
   },
   planTitle: {
     fontSize: 18,
-    fontFamily: 'Inter-Bold',
+    fontFamily: 'Fredoka-Bold',
     color: '#FFFFFF',
     marginBottom: 4,
   },
   planSubtitle: {
     fontSize: 13,
-    fontFamily: 'Inter-Regular',
+    fontFamily: 'Fredoka-Regular',
     color: '#CCCCCC',
   },
   planPriceContainer: {
@@ -2358,12 +2433,12 @@ const styles = StyleSheet.create({
   },
   planPrice: {
     fontSize: 24,
-    fontFamily: 'Inter-Bold',
+    fontFamily: 'Fredoka-Bold',
     color: '#FFFFFF',
   },
   planPeriod: {
     fontSize: 12,
-    fontFamily: 'Inter-Regular',
+    fontFamily: 'Fredoka-Regular',
     color: '#CCCCCC',
   },
   featuresContainer: {
@@ -2374,7 +2449,7 @@ const styles = StyleSheet.create({
   },
   featuresTitle: {
     fontSize: 14,
-    fontFamily: 'Inter-Bold',
+    fontFamily: 'Fredoka-Bold',
     color: '#FFFFFF',
     marginBottom: 12,
   },
@@ -2388,7 +2463,7 @@ const styles = StyleSheet.create({
   },
   featureText: {
     fontSize: 14,
-    fontFamily: 'Inter-Regular',
+    fontFamily: 'Fredoka-Regular',
     color: '#CCCCCC',
   },
 });

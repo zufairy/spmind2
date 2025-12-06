@@ -115,8 +115,15 @@ class MultiplayerService {
         .eq('id', roomId)
         .single();
 
-      if (roomFetchError) {
+      if (roomFetchError || !currentRoom) {
         console.error('Error fetching room for join:', roomFetchError);
+        this.currentRoomId = roomId;
+        return true;
+      }
+
+      // Ensure players is an array
+      if (!currentRoom.players || !Array.isArray(currentRoom.players)) {
+        console.error('Invalid players data in room:', currentRoom);
         this.currentRoomId = roomId;
         return true;
       }
@@ -205,6 +212,19 @@ class MultiplayerService {
         }
         this.currentRoomId = null;
         return true; // Return true to allow local cleanup
+      }
+
+      // Ensure players is an array
+      if (!room.players || !Array.isArray(room.players)) {
+        console.error('Invalid players data in room:', room);
+        // Still try to cleanup local state
+        const channel = this.channels.get(roomId);
+        if (channel) {
+          await supabase.removeChannel(channel);
+          this.channels.delete(roomId);
+        }
+        this.currentRoomId = null;
+        return true;
       }
 
       // Filter out the leaving player
@@ -453,8 +473,14 @@ class MultiplayerService {
         .eq('id', roomId)
         .single();
 
-      if (positionFetchError) {
+      if (positionFetchError || !roomData) {
         console.error('Error fetching room for position update:', positionFetchError);
+        return;
+      }
+
+      // Ensure players is an array
+      if (!roomData.players || !Array.isArray(roomData.players)) {
+        console.error('Invalid players data in room:', roomData);
         return;
       }
 
@@ -521,6 +547,12 @@ class MultiplayerService {
 
       if (fetchError || !roomData) {
         console.error('Error fetching room for sprite update:', fetchError);
+        return;
+      }
+
+      // Ensure players is an array
+      if (!roomData.players || !Array.isArray(roomData.players)) {
+        console.error('Invalid players data in room:', roomData);
         return;
       }
 

@@ -6,6 +6,7 @@ import {
   ScrollView,
   TextInput,
   TouchableOpacity,
+  TouchableWithoutFeedback,
   KeyboardAvoidingView,
   Platform,
   Dimensions,
@@ -507,18 +508,24 @@ export default function OnboardingScreen() {
 
   // Add keyboard event listeners for smoother input experience
   useEffect(() => {
-    const keyboardDidShowListener = Keyboard.addListener('keyboardDidShow', () => {
-      // Scroll to bottom when keyboard appears
-      setTimeout(() => {
-        if (scrollViewRef.current) {
-          scrollViewRef.current.scrollToEnd({ animated: true });
-        }
-      }, 100);
-    });
+    const keyboardDidShowListener = Keyboard.addListener(
+      Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow',
+      (event) => {
+        // Scroll to bottom when keyboard appears
+        setTimeout(() => {
+          if (scrollViewRef.current) {
+            scrollViewRef.current.scrollToEnd({ animated: true });
+          }
+        }, Platform.OS === 'ios' ? 100 : 250);
+      }
+    );
 
-    const keyboardDidHideListener = Keyboard.addListener('keyboardDidHide', () => {
-      // Optional: handle keyboard hide
-    });
+    const keyboardDidHideListener = Keyboard.addListener(
+      Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide',
+      () => {
+        // Optional: handle keyboard hide
+      }
+    );
 
     return () => {
       keyboardDidShowListener.remove();
@@ -1246,6 +1253,7 @@ export default function OnboardingScreen() {
                 : userResponse.trim();
               
               if (hasValidInput) {
+                Keyboard.dismiss();
                 handleNextStep();
               }
             }}
@@ -1733,18 +1741,20 @@ export default function OnboardingScreen() {
             // Chat Mode - White Background with Vibrant Colors
             <KeyboardAvoidingView 
               style={styles.chatModeContainer}
-              behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-              keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
+              behavior={Platform.OS === 'ios' ? 'padding' : 'padding'}
+              keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
+              enabled={true}
             >
               {/* Messages Area */}
-              <ScrollView
-                ref={scrollViewRef}
-                style={styles.messagesArea}
-                contentContainerStyle={styles.messagesContent}
-                showsVerticalScrollIndicator={false}
-                keyboardShouldPersistTaps="handled"
-                keyboardDismissMode="interactive"
-              >
+              <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+                <ScrollView
+                  ref={scrollViewRef}
+                  style={styles.messagesArea}
+                  contentContainerStyle={styles.messagesContent}
+                  showsVerticalScrollIndicator={false}
+                  keyboardShouldPersistTaps="handled"
+                  keyboardDismissMode="interactive"
+                >
                 {conversationHistory.length === 0 ? (
                   // Fallback message if no conversation history
                   <Animatable.View
@@ -1818,7 +1828,8 @@ export default function OnboardingScreen() {
                     </View>
                   </Animatable.View>
                 )}
-              </ScrollView>
+                </ScrollView>
+              </TouchableWithoutFeedback>
 
               {/* Minimal Glass Input Area */}
               <View style={styles.glassInputContainer}>
@@ -1827,6 +1838,7 @@ export default function OnboardingScreen() {
                   <TouchableOpacity 
                     style={styles.glassSendButton}
                     onPress={() => {
+                      Keyboard.dismiss();
                       const currentStepData = onboardingSteps[currentStep];
                       const hasValidInput = currentStepData.type === 'multiselect' 
                         ? selectedMultiOptions.length > 0 
@@ -2000,7 +2012,7 @@ const styles = StyleSheet.create({
   },
   messagesContent: {
     flexGrow: 1,
-    paddingBottom: 16,
+    paddingBottom: 100,
   },
   messageWrapper: {
     marginBottom: 12,
@@ -2113,6 +2125,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.25,
     shadowRadius: 6,
     elevation: 8,
+    zIndex: 10,
   },
   glassInputWrapper: {
     flexDirection: 'row',
