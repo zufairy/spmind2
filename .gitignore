@@ -1,6 +1,8 @@
-
+node_modules/
+.expo/
+.expo-shared/
+dist/
+*.log
 expo-env.d.ts
-
-.node_modules
-node_modules
-node_modules
+.env
+.env.local

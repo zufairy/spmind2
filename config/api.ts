@@ -1,6 +1,6 @@
 // API Configuration
 export const API_CONFIG = {
-  OPENAI_API_KEY: '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',
+  OPENAI_API_KEY: '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',
   
   // OpenAI API Configuration
   OPENAI: {
